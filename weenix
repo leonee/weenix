@@ -19,7 +19,7 @@ GDB_COMM_INIT=commands.gdb
 GDB_INIT=init.gdb
 GDBCOMM=gdb-commands
 QEMU=qemu-system-i386
-QEMU_FLAGS="-d int -k en-us -boot order=dca"
+QEMU_FLAGS="-k en-us -boot order=dca"
 if ! which $QEMU; then
 	QEMU=qemu
 	if ! which $QEMU; then

@@ -124,13 +124,24 @@ kmain()
 static void *
 bootstrap(int arg1, void *arg2)
 {
-        /* necessary to finalize page table information */
-        pt_template_init();
+    /* necessary to finalize page table information */
+    pt_template_init();
 
-        NOT_YET_IMPLEMENTED("PROCS: bootstrap");
+    char *name = "idle process";
 
-        panic("weenix returned to bootstrap()!!! BAD!!!\n");
-        return NULL;
+    proc_t *idle_proc = proc_create(name);
+
+    KASSERT(idle_proc->p_pid == 0);
+
+    kthread_t *idle_thread = kthread_create(idle_proc, idleproc_run, NULL, NULL);
+
+    curproc = idle_proc;
+    curthr = idle_thread;
+
+    context_make_active(&idle_thread->kt_ctx);   
+
+    panic("weenix returned to bootstrap()!!! BAD!!!\n");
+    return NULL;
 }
 
 /**
@@ -148,63 +159,67 @@ bootstrap(int arg1, void *arg2)
 static void *
 idleproc_run(int arg1, void *arg2)
 {
-        int status;
-        pid_t child;
+    dbg_print("in the idle proc!!!!!!!!!!!!!!!!!!!!!\n");
+    int status;
+    pid_t child;
 
-        /* create init proc */
-        kthread_t *initthr = initproc_create();
-        init_call_all();
-        GDB_CALL_HOOK(initialized);
+    /* create init proc */
+    kthread_t *initthr = initproc_create();
+    init_call_all();
+    GDB_CALL_HOOK(initialized);
 
-        /* Create other kernel threads (in order) */
+    /* Create other kernel threads (in order) */
 
 #ifdef __VFS__
-        /* Once you have VFS remember to set the current working directory
-         * of the idle and init processes */
+    /* Once you have VFS remember to set the current working directory
+     * of the idle and init processes */
 
-        /* Here you need to make the null, zero, and tty devices using mknod */
-        /* You can't do this until you have VFS, check the include/drivers/dev.h
-         * file for macros with the device ID's you will need to pass to mknod */
+    /* Here you need to make the null, zero, and tty devices using mknod */
+    /* You can't do this until you have VFS, check the include/drivers/dev.h
+     * file for macros with the device ID's you will need to pass to mknod */
 #endif
 
-        /* Finally, enable interrupts (we want to make sure interrupts
-         * are enabled AFTER all drivers are initialized) */
-        intr_enable();
+    /* Finally, enable interrupts (we want to make sure interrupts
+     * are enabled AFTER all drivers are initialized) */
+    intr_enable();
 
-        /* Run initproc */
-        sched_make_runnable(initthr);
-        /* Now wait for it */
-        child = do_waitpid(-1, 0, &status);
-        KASSERT(PID_INIT == child);
+    /* Run initproc */
+    sched_make_runnable(initthr);
+    sched_switch();
+
+    /* Now wait for it */
+    child = do_waitpid(-1, 0, &status);
+    dbg_print("it worked!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
+    KASSERT(PID_INIT == child);
 
 #ifdef __MTP__
-        kthread_reapd_shutdown();
+    kthread_reapd_shutdown();
 #endif
 
 
 #ifdef __SHADOWD__
-        /* wait for shadowd to shutdown */
-        shadowd_shutdown();
+    /* wait for shadowd to shutdown */
+    shadowd_shutdown();
 #endif
 
 #ifdef __VFS__
-        /* Shutdown the vfs: */
-        dbg_print("weenix: vfs shutdown...\n");
-        vput(curproc->p_cwd);
-        if (vfs_shutdown())
-                panic("vfs shutdown FAILED!!\n");
+    /* Shutdown the vfs: */
+    dbg_print("weenix: vfs shutdown...\n");
+    vput(curproc->p_cwd);
+    if (vfs_shutdown())
+        panic("vfs shutdown FAILED!!\n");
 
 #endif
 
-        /* Shutdown the pframe system */
+    /* Shutdown the pframe system */
 #ifdef __S5FS__
-        pframe_shutdown();
+    pframe_shutdown();
 #endif
 
-        dbg_print("\nweenix: halted cleanly!\n");
-        GDB_CALL_HOOK(shutdown);
-        hard_shutdown();
-        return NULL;
+    dbg_print("\nweenix: halted cleanly!\n");
+    GDB_CALL_HOOK(shutdown);
+    hard_shutdown();
+    return NULL;
 }
 
 /**
@@ -220,8 +235,13 @@ idleproc_run(int arg1, void *arg2)
 static kthread_t *
 initproc_create(void)
 {
-        NOT_YET_IMPLEMENTED("PROCS: initproc_create");
-        return NULL;
+    proc_t *initproc = proc_create("init proc");
+
+    KASSERT(initproc->p_pid == (pid_t) 1 && "initproc pid isn't 1");
+
+    kthread_t *init_thread = kthread_create(initproc, initproc_run, NULL, NULL);
+
+    return init_thread;
 }
 
 /**
@@ -238,9 +258,7 @@ initproc_create(void)
 static void *
 initproc_run(int arg1, void *arg2)
 {
-        NOT_YET_IMPLEMENTED("PROCS: initproc_run");
-
-        return NULL;
+    panic("Made it to initproc_run\n");
 }
 
 /**

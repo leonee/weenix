@@ -74,8 +74,31 @@ free_stack(char *stack)
 kthread_t *
 kthread_create(struct proc *p, kthread_func_t func, long arg1, void *arg2)
 {
-        NOT_YET_IMPLEMENTED("PROCS: kthread_create");
-        return NULL;
+    kthread_t *k = slab_obj_alloc(kthread_allocator);
+
+    char *kstack = alloc_stack();
+
+    if (kstack == NULL){
+        panic("no stack size");
+    }
+    
+    k->kt_kstack = kstack;
+
+    k->kt_proc = p;
+
+    k->kt_cancelled = 0;
+    k->kt_wchan = NULL;
+    k->kt_state = KT_NO_STATE;
+
+    list_link_init(&k->kt_qlink);
+
+    list_link_init(&k->kt_plink);
+    list_insert_tail(&p->p_threads, &k->kt_plink);
+
+    context_setup(&k->kt_ctx, func, arg1, arg2, k->kt_kstack, 
+            DEFAULT_STACK_SIZE, p->p_pagedir);    
+
+    return k;
 }
 
 void
@@ -103,7 +126,19 @@ kthread_destroy(kthread_t *t)
 void
 kthread_cancel(kthread_t *kthr, void *retval)
 {
-        NOT_YET_IMPLEMENTED("PROCS: kthread_cancel");
+    if (kthr == curthr){
+        KASSERT(kthr->kt_state == KT_RUN);
+        kthread_exit(retval);
+    } else {
+        KASSERT(kthr->kt_state == KT_SLEEP || kthr->kt_state == KT_SLEEP_CANCELLABLE);
+
+        kthr->kt_cancelled = 1;
+        kthr->kt_retval = retval;
+
+        if (kthr->kt_state == KT_SLEEP_CANCELLABLE){
+            sched_wakeup_on(kthr->kt_wchan);
+        }
+    }
 }
 
 /*
@@ -119,9 +154,9 @@ kthread_cancel(kthread_t *kthr, void *retval)
  * cleaned up.
  */
 void
-kthread_exit(void *retval)
-{
-        NOT_YET_IMPLEMENTED("PROCS: kthread_exit");
+kthread_exit(void *retval){
+    curthr->kt_retval = retval;
+    proc_thread_exited(retval);
 }
 
 /*
