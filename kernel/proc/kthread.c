@@ -93,7 +93,7 @@ kthread_create(struct proc *p, kthread_func_t func, long arg1, void *arg2)
     list_link_init(&k->kt_qlink);
 
     list_link_init(&k->kt_plink);
-    list_insert_tail(&p->p_threads, &k->kt_plink);
+    list_insert_head(&p->p_threads, &k->kt_plink);
 
     context_setup(&k->kt_ctx, func, arg1, arg2, k->kt_kstack, 
             DEFAULT_STACK_SIZE, p->p_pagedir);    

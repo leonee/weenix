@@ -185,11 +185,9 @@ idleproc_run(int arg1, void *arg2)
 
     /* Run initproc */
     sched_make_runnable(initthr);
-    sched_switch();
 
     /* Now wait for it */
     child = do_waitpid(-1, 0, &status);
-    dbg_print("it worked!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
     KASSERT(PID_INIT == child);
 
 #ifdef __MTP__
@@ -258,7 +256,7 @@ initproc_create(void)
 static void *
 initproc_run(int arg1, void *arg2)
 {
-    panic("Made it to initproc_run\n");
+    do_exit(0);
 }
 
 /**

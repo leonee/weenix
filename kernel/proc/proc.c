@@ -84,9 +84,6 @@ proc_create(char *name)
 {
     proc_t *p = slab_obj_alloc(proc_allocator);
     
-    ktqueue_t q;
-    sched_queue_init(&q);
-
     /* put this proc in the proc list */
     list_link_init(&p->p_list_link)
 
@@ -99,7 +96,7 @@ proc_create(char *name)
     p->p_pproc = curproc;
 
     p->p_state = PROC_RUNNING;
-    p->p_wait = q;  
+    sched_queue_init(&p->p_wait);  
    
     p->p_pagedir = pt_create_pagedir(); 
   
@@ -123,13 +120,7 @@ proc_create(char *name)
         /*     make sure we're not giving the idle proc a parent */
         KASSERT(p->p_pid != (pid_t) 0);
         
-        proc_t *iterator_proc;
-        dbg(DBG_ALL, "starting to iterate through the list\n");
-        list_iterate_begin(&_proc_list, iterator_proc, proc_t, p_list_link) {
-            dbg(DBG_ALL, "%s, with pid %d\n", iterator_proc->p_comm, iterator_proc->p_pid);
-        } list_iterate_end();
-
-        list_insert_tail(&p->p_pproc->p_children, &p->p_child_link); 
+        list_insert_head(&p->p_pproc->p_children, &p->p_child_link); 
 
         dbg_print("pid of proc:%d\n", p->p_pid);
     }
@@ -201,13 +192,11 @@ proc_cleanup(int status)
     list_t *children = &curproc->p_children;
 
     if (!list_empty(children)){
-       /* KASSERT(curproc != proc_initproc && "initproc still has children!!!");*/
+        KASSERT(curproc != proc_initproc && "initproc still has children!!!");
         reparent_all_children(children);        
     }
 
     curproc->p_status = status;
-    
-    pt_destroy_pagedir(curproc->p_pagedir);
     
     curproc->p_state = PROC_DEAD;
     
@@ -299,18 +288,21 @@ static proc_t *find_dead_child(){
 }
 
 /* disposes of the remaining resources of a
- * cancelled child thread
+ * cancelled child proc
  */
 static void cleanup_child_proc(proc_t *p){
     KASSERT(p->p_state == PROC_DEAD && "attempting to clean up a running process\n");
 
-    list_link_t *link;
     list_t *threads = &p->p_threads;
+    list_link_t *link = threads->l_next;
 
-    for (link = threads->l_next; link != threads; link = link->l_next){
+    while (link != threads){
         kthread_t *t = list_item(link, kthread_t, kt_plink);
+        link = link->l_next;
         kthread_destroy(t);
     }
+ 
+    pt_destroy_pagedir(p->p_pagedir);
 }
 
 /**
@@ -335,6 +327,8 @@ static pid_t do_waitpid_any(int *status){
          */
         dead_child = find_dead_child();
     }
+
+    cleanup_child_proc(dead_child);
 
     status = &dead_child->p_status;
     return dead_child->p_pid;
@@ -388,6 +382,8 @@ static pid_t do_waitpid_specific(pid_t pid, int *status){
         }
     }
 
+    cleanup_child_proc(p);
+
     status = &p->p_status;
     return p->p_pid;
 }
@@ -438,7 +434,21 @@ do_waitpid(pid_t pid, int options, int *status)
 void
 do_exit(int status)
 {
-        NOT_YET_IMPLEMENTED("PROCS: do_exit");
+    list_link_t *link;
+    list_t *threads = &curproc->p_threads;
+
+    for (link = threads->l_next; link != threads; link = link->l_next){
+        kthread_t *t = list_item(link, kthread_t, kt_plink);
+        if (t != curthr){
+            panic("trying to cancel curproc's thread, but it isn't the\
+                   curr thread\n");
+            kthread_cancel(t, 0);
+        }
+    }
+
+    curproc->p_status = status;
+
+    kthread_exit(0);
 }
 
 size_t
