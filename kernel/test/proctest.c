@@ -192,6 +192,27 @@ static void test_kthread_cancel(){
     dbg(DBG_TESTPASS, "all kthread_cancel tests passed!\n");
 }
 
+static void test_proc_kill(){
+    proc_t *test_proc = proc_create("proc_kill_test_proc");
+    kthread_t *test_thread = kthread_create(test_proc, sleep_function, NULL,
+                                        (void *) &test_proc->p_wait);
+
+    sched_make_runnable(test_thread);
+
+    yield();
+
+    proc_kill(test_proc, 7);
+
+    KASSERT(test_thread->kt_cancelled == 1);
+    KASSERT(test_thread->kt_retval == 0);
+    KASSERT(test_proc->p_status == 7);
+
+    int status;
+    do_waitpid(test_proc->p_pid, 0, &status);
+
+    dbg(DBG_TESTPASS, "all proc_kill tests passed!\n");
+}
+
 void run_proc_tests(){
 
     test_proc_create();
@@ -207,13 +228,14 @@ void run_proc_tests(){
 
     test_kthread_cancel();
 
+    test_proc_kill();
+
     dbg(DBG_TESTPASS, "all proc-related tests passed!\n");
 }
 
 
 /* TODO:
    - mutexes
-   - test cancelling
    - proc kill
    - proc kill all
    */

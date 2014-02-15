@@ -219,12 +219,14 @@ proc_kill(proc_t *p, int status)
     }
 
     list_link_t *link;
-    list_t *threads = &curproc->p_threads;
+    list_t *threads = &p->p_threads;
 
     for (link = threads->l_next; link != threads; link = link->l_next){
         kthread_t *t = list_item(link, kthread_t, kt_plink);
-        kthread_cancel(t, &status);
+        kthread_cancel(t, 0);
     }
+
+    p->p_status = status;
 }
 
 /*
@@ -343,7 +345,7 @@ static pid_t do_waitpid_any(int *status){
     proc_t *dead_child = find_dead_child();
 
     if (dead_child == NULL){
-        sched_sleep_on(&curproc->p_wait);
+        sched_cancellable_sleep_on(&curproc->p_wait);
 
         /* we only have to do this once, because this process
          * will only wake up if a child exits 
@@ -397,7 +399,7 @@ static pid_t do_waitpid_specific(pid_t pid, int *status){
     KASSERT(p != NULL && "given proc isn't a child of curproc!!!\n");
 
     while (p->p_state != PROC_DEAD){
-        sched_sleep_on(&curproc->p_wait);
+        sched_cancellable_sleep_on(&curproc->p_wait);
     }
 
     cleanup_child_proc(p);
