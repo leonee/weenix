@@ -10,6 +10,7 @@
 typedef enum {ANY, SPECIFIC} waitpid_type_t;
 
 static void * simple_function(int arg1, void *arg2);
+static void * test_proc_kill_all_func(int arg1, void *arg2);
     
 static int in_child_list(proc_t *myproc){
     list_link_t *link;
@@ -172,6 +173,8 @@ static void yield(){
 }
 
 static void test_kthread_cancel(){
+    dbg_print("testing kthread_cancel\n");
+
     proc_t *test_proc = proc_create("kthread_cancel_test_proc");
     kthread_t *test_thread = kthread_create(test_proc, sleep_function, NULL,
                                         (void *) &test_proc->p_wait);
@@ -193,6 +196,8 @@ static void test_kthread_cancel(){
 }
 
 static void test_proc_kill(){
+    dbg_print("testing proc_kill\n");
+
     proc_t *test_proc = proc_create("proc_kill_test_proc");
     kthread_t *test_thread = kthread_create(test_proc, sleep_function, NULL,
                                         (void *) &test_proc->p_wait);
@@ -213,6 +218,72 @@ static void test_proc_kill(){
     dbg(DBG_TESTPASS, "all proc_kill tests passed!\n");
 }
 
+static void * test_proc_kill_all_func(int arg1, void *arg2){
+
+    proc_t *test_procs[NUM_PROCS];
+    kthread_t *test_threads[NUM_PROCS];
+
+    int i;
+    for (i = 0; i < NUM_PROCS; i++){
+        test_procs[i] = proc_create("proc_kill_all test proc");
+        test_threads[i] = kthread_create(test_procs[i], sleep_function, NULL,
+                                    (void *) &test_procs[i]->p_wait);
+
+        sched_make_runnable(test_threads[i]);
+    }
+
+    yield();
+
+    proc_kill_all();
+
+    /* if we get here, then we didn't call do_exit() in 
+     * proc_kill_all(), meaning that we must have called
+     * proc_kill_all() from the init_proc
+     */
+    KASSERT(curproc->p_pid == 1);
+
+    int j;
+    for (j = 0; j < NUM_PROCS; j++){
+        KASSERT(test_threads[j]->kt_cancelled == 1);
+        KASSERT(test_threads[j]->kt_retval == 0);
+        KASSERT(test_procs[j]->p_status == 0);
+
+        int status;
+        do_waitpid(test_procs[j]->p_pid, 0, &status);
+    }
+
+    return NULL;
+}
+
+static void test_proc_kill_all(){
+    dbg_print("testing proc_kill_all when called from init proc\n");
+    test_proc_kill_all_func(NULL, NULL);
+
+    dbg_print("testing proc_kill_all when called from a different proc\n");
+
+    proc_t *test_proc = proc_create("proc_kill_all_func caller");
+    kthread_t *test_thread = kthread_create(test_proc, test_proc_kill_all_func, 
+                                       NULL, NULL);
+
+    sched_make_runnable(test_thread);
+
+    int status;
+    pid_t retpid = do_waitpid(test_proc->p_pid, 0, &status);
+    KASSERT(retpid == test_proc->p_pid);
+
+    int i;
+    for (i = 0; i < NUM_PROCS; i++){
+        pid_t retval = do_waitpid(-1, 0, &status);
+        
+        /* make sure we actually were able to wait on this pid,
+         * meaning that it was properly killed in proc_kill_all
+         */
+        KASSERT(retval > 0);
+    }
+
+    dbg(DBG_TESTPASS, "all proc_kill_all tests passed!\n");
+}
+
 void run_proc_tests(){
 
     test_proc_create();
@@ -229,6 +300,7 @@ void run_proc_tests(){
     test_kthread_cancel();
 
     test_proc_kill();
+    test_proc_kill_all();
 
     dbg(DBG_TESTPASS, "all proc-related tests passed!\n");
 }
@@ -236,6 +308,4 @@ void run_proc_tests(){
 
 /* TODO:
    - mutexes
-   - proc kill
-   - proc kill all
    */

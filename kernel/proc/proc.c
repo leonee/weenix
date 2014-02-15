@@ -137,7 +137,7 @@ proc_create(char *name)
  */
 static void reparent_proc(proc_t *p){
     p->p_pproc = proc_initproc;
-    list_insert_tail(&proc_initproc->p_children, &p->p_list_link);
+    list_insert_tail(&proc_initproc->p_children, &p->p_child_link);
 }
 
 /**
