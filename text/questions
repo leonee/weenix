@@ -1,0 +1,8 @@
+in kthread_exit()
+    - are we not supposed to set kt_state here?
+        
+in cleanup_child_proc()
+    - pt_destroy_pagedir() is causing things to freak
+      the fuck out. What should I do instead?
+
+Check for things returning null

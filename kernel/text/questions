@@ -1,0 +1,31 @@
+in create_proc(),   
+    -  can we set p_pproc to the cur proc?
+    - what to do about p_child_link?
+    - do we just not set status?
+    - wtf to do about warnings                
+
+in kthread_create(),
+    - is kt_qlink for the scheduler?
+    - what to do if no stack space?
+
+in sched_make_runnable()
+    - how do we make sure that the run queue is initialized?
+        - I made sched_init non-static and call it from kmain.
+          Is that bad?
+
+in kthread_exit()
+    - are we not supposed to set kt_state here?
+
+in proc_cleanup()
+    - what can we not clean up from the process?
+
+in proc_thread_exited()
+    - what do we call proc_cleanup() with? Do we just pass in retval?
+
+in do_waitpid()
+    - should these sleeps be cancellable?
+        - if it gets cancelled, what status should it exit with?
+        - what should we do with status?
+
+in sched_switch()
+    - do we put the current thread on the end of the run queue?
