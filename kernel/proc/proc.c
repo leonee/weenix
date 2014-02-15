@@ -121,12 +121,8 @@ proc_create(char *name)
         KASSERT(p->p_pid != (pid_t) 0);
         
         list_insert_head(&p->p_pproc->p_children, &p->p_child_link); 
-
-        dbg_print("pid of proc:%d\n", p->p_pid);
     }
    
-    
-
     /* if the init proc, set the global variable */
     if (p->p_pid == (pid_t) 1){
         proc_initproc = p;
@@ -200,6 +196,9 @@ proc_cleanup(int status)
     
     curproc->p_state = PROC_DEAD;
     
+    /* remove from the list of all processes */
+    list_remove(&curproc->p_list_link);
+
     sched_wakeup_on(&curproc->p_pproc->p_wait);
 }
 
@@ -214,7 +213,18 @@ proc_cleanup(int status)
 void
 proc_kill(proc_t *p, int status)
 {
-        NOT_YET_IMPLEMENTED("PROCS: proc_kill");
+    if (p == curproc){
+        do_exit(status);
+        panic("returned from do_exit()\n");
+    }
+
+    list_link_t *link;
+    list_t *threads = &curproc->p_threads;
+
+    for (link = threads->l_next; link != threads; link = link->l_next){
+        kthread_t *t = list_item(link, kthread_t, kt_plink);
+        kthread_cancel(t, &status);
+    }
 }
 
 /*
@@ -226,7 +236,22 @@ proc_kill(proc_t *p, int status)
 void
 proc_kill_all()
 {
-        NOT_YET_IMPLEMENTED("PROCS: proc_kill_all");
+    list_t *all_procs = &_proc_list; 
+    list_link_t *link = all_procs->l_next;
+
+    while (link != all_procs){
+        proc_t *p = list_item(link, proc_t, p_list_link);
+        link = link->l_next;
+
+        /* if it's not the curproc or a child of the idle proc, kill it */
+        if (p != curproc && p->p_pproc && p->p_pproc->p_pid != 0){
+            proc_kill(p, 0);
+        }
+    }
+
+    if (curproc->p_pproc && curproc->p_pproc->p_pid != 0){
+        do_exit(0);
+    }
 }
 
 proc_t *
@@ -258,7 +283,7 @@ proc_list()
 void
 proc_thread_exited(void *retval)
 {
-    proc_cleanup(retval);
+    proc_cleanup((int) retval);
     curthr->kt_state = KT_EXITED;
     sched_switch();
 }
@@ -302,7 +327,10 @@ static void cleanup_child_proc(proc_t *p){
         kthread_destroy(t);
     }
  
+   list_remove(&p->p_child_link); 
+    /*
     pt_destroy_pagedir(p->p_pagedir);
+    */
 }
 
 /**
@@ -315,13 +343,8 @@ static pid_t do_waitpid_any(int *status){
     proc_t *dead_child = find_dead_child();
 
     if (dead_child == NULL){
-        int wait_result = sched_cancellable_sleep_on(&curproc->p_wait);
+        sched_sleep_on(&curproc->p_wait);
 
-        if (wait_result == -EINTR){
-            proc_cleanup(-1);
-            return -ECHILD;
-        }
-        
         /* we only have to do this once, because this process
          * will only wake up if a child exits 
          */
@@ -330,7 +353,7 @@ static pid_t do_waitpid_any(int *status){
 
     cleanup_child_proc(dead_child);
 
-    status = &dead_child->p_status;
+    *status = dead_child->p_status;
     return dead_child->p_pid;
 }
 
@@ -374,17 +397,12 @@ static pid_t do_waitpid_specific(pid_t pid, int *status){
     KASSERT(p != NULL && "given proc isn't a child of curproc!!!\n");
 
     while (p->p_state != PROC_DEAD){
-        int wait_result = sched_cancellable_sleep_on(&curproc->p_wait);
-
-        if (wait_result == -EINTR){
-            proc_cleanup(-1);
-            return -ECHILD;
-        }
+        sched_sleep_on(&curproc->p_wait);
     }
 
     cleanup_child_proc(p);
 
-    status = &p->p_status;
+    *status = p->p_status;
     return p->p_pid;
 }
 
@@ -412,9 +430,9 @@ do_waitpid(pid_t pid, int options, int *status)
 
     if (pid < -1){
         ret_pid = -ECHILD;
-    } else  if (list_empty(&curproc->p_children)){
+    } else if (list_empty(&curproc->p_children)){
         ret_pid = -ECHILD;
-    } else  if (pid == (pid_t) -1){
+    } else if (pid == (pid_t) -1){
         ret_pid = do_waitpid_any(status);      
     } else if (is_child(pid, &curproc->p_children)){
         ret_pid = do_waitpid_specific(pid, status);
@@ -440,15 +458,14 @@ do_exit(int status)
     for (link = threads->l_next; link != threads; link = link->l_next){
         kthread_t *t = list_item(link, kthread_t, kt_plink);
         if (t != curthr){
-            panic("trying to cancel curproc's thread, but it isn't the\
-                   curr thread\n");
             kthread_cancel(t, 0);
         }
     }
 
-    curproc->p_status = status;
+    /* TODO: Make sure it's okay for this to be commented out
+    curproc->p_status = status;*/
 
-    kthread_exit(0);
+    kthread_exit((void *) status);
 }
 
 size_t

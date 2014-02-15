@@ -15,7 +15,7 @@
 void
 kmutex_init(kmutex_t *mtx)
 {
-        NOT_YET_IMPLEMENTED("PROCS: kmutex_init");
+    NOT_YET_IMPLEMENTED("PROCS: kmutex_init");
 }
 
 /*

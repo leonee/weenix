@@ -159,7 +159,6 @@ bootstrap(int arg1, void *arg2)
 static void *
 idleproc_run(int arg1, void *arg2)
 {
-    dbg_print("in the idle proc!!!!!!!!!!!!!!!!!!!!!\n");
     int status;
     pid_t child;
 
@@ -256,7 +255,19 @@ initproc_create(void)
 static void *
 initproc_run(int arg1, void *arg2)
 {
-    do_exit(0);
+    run_proc_tests();
+
+   list_t *children = &curproc->p_children; 
+   list_link_t *link;
+
+   /*
+   dbg_print("initproc children: \n");
+   for (link = children->l_next; link != children; link = link->l_next){
+       proc_t *p = list_item(link, proc_t, p_child_link);
+
+       dbg_print("%s\n", p->p_comm);
+   }
+   */
 }
 
 /**

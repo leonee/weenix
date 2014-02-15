@@ -76,10 +76,14 @@ kthread_create(struct proc *p, kthread_func_t func, long arg1, void *arg2)
 {
     kthread_t *k = slab_obj_alloc(kthread_allocator);
 
+    if (k == NULL){
+        return NULL;
+    }
+
     char *kstack = alloc_stack();
 
     if (kstack == NULL){
-        panic("no stack size");
+        return NULL;
     }
     
     k->kt_kstack = kstack;
@@ -156,7 +160,9 @@ kthread_cancel(kthread_t *kthr, void *retval)
 void
 kthread_exit(void *retval){
     curthr->kt_retval = retval;
+    curthr->kt_state = KT_EXITED;
     proc_thread_exited(retval);
+
 }
 
 /*

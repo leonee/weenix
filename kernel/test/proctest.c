@@ -1,6 +1,7 @@
 #include "proc/proc.h"
 #include "util/list.h"
 #include "proc/sched.h"
+#include "globals.h"
 #include "util/debug.h"
 #include "errno.h"
 
@@ -52,6 +53,8 @@ static void test_proc_create(){
 
     int status;
     do_waitpid(myproc->p_pid, 0, &status);
+    
+    dbg(DBG_TESTPASS, "all proc_create tests passed!\n");
 }
 
 /* 
@@ -150,7 +153,43 @@ static void * test_do_exit_and_do_waitpid(int arg1, void *arg2){
     dbg_print("testing do_waitpid with non-child pid\n");
     test_do_waitpid_no_child();
 
+    dbg(DBG_TESTPASS, "all do_waitpid tests passed!\n");
+
     return NULL;
+}
+
+static void * sleep_function(int arg1, void *arg2){
+    dbg_print("going to sleep...\n");
+    sched_cancellable_sleep_on((ktqueue_t *) arg2);
+    dbg_print("awoken from sleep!\n");
+
+    return NULL;
+}
+
+static void yield(){
+    sched_make_runnable(curthr);
+    sched_switch();
+}
+
+static void test_kthread_cancel(){
+    proc_t *test_proc = proc_create("kthread_cancel_test_proc");
+    kthread_t *test_thread = kthread_create(test_proc, sleep_function, NULL,
+                                        (void *) &test_proc->p_wait);
+
+    sched_make_runnable(test_thread);
+
+    /* make sure the thread goes to sleep before we cancel it */
+    yield();
+
+    kthread_cancel(test_thread, (void *) 5);
+
+    KASSERT(test_thread->kt_cancelled == 1);
+    KASSERT((int) test_thread->kt_retval == 5);
+
+    int status;
+    do_waitpid(test_proc->p_pid, 0, &status);
+
+    dbg(DBG_TESTPASS, "all kthread_cancel tests passed!\n");
 }
 
 void run_proc_tests(){
@@ -166,7 +205,9 @@ void run_proc_tests(){
     int status;
     do_waitpid(waitpid_test_proc->p_pid, 0, &status);
 
-    dbg(DBG_TESTPASS, "all tests passed!\n");
+    test_kthread_cancel();
+
+    dbg(DBG_TESTPASS, "all proc-related tests passed!\n");
 }
 
 
@@ -175,4 +216,4 @@ void run_proc_tests(){
    - test cancelling
    - proc kill
    - proc kill all
-*/
+   */
