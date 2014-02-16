@@ -127,8 +127,25 @@ tty_init()
 tty_device_t *
 tty_create(tty_driver_t *driver, int id)
 {
-        NOT_YET_IMPLEMENTED("DRIVERS: tty_create");
-        return 0;
+    tty_device_t *tty = (tty_device_t *) kmalloc(sizeof(tty_device_t));
+
+    if (tty == NULL){
+        return NULL;
+    }
+
+    tty->tty_driver = driver;
+    tty->tty_ldisc = NULL;
+    tty->tty_id = id;
+
+    tty->tty_cdev.cd_id = MKDEVID(2, id);
+    tty->tty_cdev.cd_ops = &tty_bytedev_ops;
+    list_link_init(&tty->tty_cdev.cd_link);
+
+    /*
+    bytedev_register(&tty->tty_cdev);
+*/
+
+    return tty;
 }
 
 /*

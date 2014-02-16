@@ -8,4 +8,12 @@ in cleanup_child_proc()
 in kmutex_lock_cancellabe()
     - what happens if you were cancelled *before* locking the mutex?
 
-Check for things returning null
+------------------------------------------------------------
+
+in tty_create()
+    - I'm bad at C. Is it okay to use dot notation?
+
+in tty_attach()
+    - what does it mean to "allocate any memory you will need later"?
+    - what should I initialize all the ints to?
+

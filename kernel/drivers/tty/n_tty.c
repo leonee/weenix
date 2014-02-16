@@ -54,8 +54,7 @@ n_tty_create()
 }
 
 void
-n_tty_destroy(tty_ldisc_t *ldisc)
-{
+n_tty_destroy(tty_ldisc_t *ldisc) {
         KASSERT(NULL != ldisc);
         kfree(ldisc_to_ntty(ldisc));
 }
@@ -65,9 +64,26 @@ n_tty_destroy(tty_ldisc_t *ldisc)
  * you will need later, and set the tty_ldisc field of the tty.
  */
 void
-n_tty_attach(tty_ldisc_t *ldisc, tty_device_t *tty)
-{
-        NOT_YET_IMPLEMENTED("DRIVERS: n_tty_attach");
+n_tty_attach(tty_ldisc_t *ldisc, tty_device_t *tty) {
+    struct n_tty *n_t = ldisc_to_ntty(ldisc);
+
+    kmutex_init(&n_t->ntty_rlock);
+    sched_queue_init(&n_t->ntty_rwaitq);
+
+    /* TODO: Is this wrong? */
+    n_t->ntty_inbuf = (char *) kmalloc(TTY_BUF_SIZE);
+
+    if (n_t->ntty_inbuf == NULL){
+        panic("not enough memory for buffer\n");
+    }
+
+    n_t->ntty_rhead = 0;
+    n_t->ntty_rawtail = 0;
+    n_t->ntty_ckdtail = 0;
+
+    tty->tty_ldisc = ldisc;
+
+    NOT_YET_IMPLEMENTED("DRIVERS: n_tty_attach");
 }
 
 /*
@@ -77,6 +93,12 @@ n_tty_attach(tty_ldisc_t *ldisc, tty_device_t *tty)
 void
 n_tty_detach(tty_ldisc_t *ldisc, tty_device_t *tty)
 {
+    struct n_tty *old_n_tty = ldisc_to_ntty(tty->tty_ldisc);
+ 
+    kfree(old_n_tty->ntty_inbuf);
+
+    tty->tty_ldisc = ldisc;
+
         NOT_YET_IMPLEMENTED("DRIVERS: n_tty_detach");
 }
 
