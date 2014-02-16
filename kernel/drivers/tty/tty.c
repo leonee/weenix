@@ -141,10 +141,6 @@ tty_create(tty_driver_t *driver, int id)
     tty->tty_cdev.cd_ops = &tty_bytedev_ops;
     list_link_init(&tty->tty_cdev.cd_link);
 
-    /*
-    bytedev_register(&tty->tty_cdev);
-*/
-
     return tty;
 }
 
