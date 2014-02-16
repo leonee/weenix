@@ -22,3 +22,26 @@
          proc/sched.c:146                   sched_cancel()    PROCS
          proc/sched.c:188                   sched_switch()    PROCS
          proc/sched.c:207            sched_make_runnable()    PROCS
+
+
+---
+
+
+   drivers/disk/ata.c:396                       ata_read()  DRIVERS
+   drivers/disk/ata.c:413                      ata_write()  DRIVERS
+   drivers/disk/ata.c:508               ata_do_operation()  DRIVERS
+   drivers/disk/ata.c:523                       ata_intr()  DRIVERS
+     drivers/memdevs.c:50                   memdevs_init()  DRIVERS
+     drivers/memdevs.c:66                      null_read()  DRIVERS
+     drivers/memdevs.c:84                     null_write()  DRIVERS
+    drivers/memdevs.c:102                      zero_read()  DRIVERS
+   drivers/tty/n_tty.c:70                   n_tty_attach()  DRIVERS
+   drivers/tty/n_tty.c:80                   n_tty_detach()  DRIVERS
+  drivers/tty/n_tty.c:104                     n_tty_read()  DRIVERS
+  drivers/tty/n_tty.c:124             n_tty_receive_char()  DRIVERS
+  drivers/tty/n_tty.c:136             n_tty_process_char()  DRIVERS
+    drivers/tty/tty.c:130                     tty_create()  DRIVERS
+    drivers/tty/tty.c:150     tty_global_driver_callback()  DRIVERS
+    drivers/tty/tty.c:160                       tty_echo()  DRIVERS
+    drivers/tty/tty.c:171                       tty_read()  DRIVERS
+    drivers/tty/tty.c:187                      tty_write()  DRIVERS

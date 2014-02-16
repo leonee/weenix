@@ -83,6 +83,10 @@ proc_t *
 proc_create(char *name)
 {
     proc_t *p = slab_obj_alloc(proc_allocator);
+
+    if (p == NULL){
+        return NULL;
+    }
     
     /* put this proc in the proc list */
     list_link_init(&p->p_list_link)
@@ -90,6 +94,10 @@ proc_create(char *name)
     list_insert_head(&_proc_list, &p->p_list_link); 
 
     p->p_pid = (pid_t) _proc_getid(); 
+
+    if (p->p_pid == -1){
+        panic("ran out of pid's to assign!\n");
+    }
 
     list_init(&p->p_threads);
     list_init(&p->p_children);
@@ -99,6 +107,10 @@ proc_create(char *name)
     sched_queue_init(&p->p_wait);  
    
     p->p_pagedir = pt_create_pagedir(); 
+
+    if (p->p_pagedir == NULL){
+        return NULL;
+    }
   
     /* initialize the name */    
     char *correct_name = name ? name : "Unnamed process";
@@ -463,9 +475,6 @@ do_exit(int status)
             kthread_cancel(t, 0);
         }
     }
-
-    /* TODO: Make sure it's okay for this to be commented out
-    curproc->p_status = status;*/
 
     kthread_exit((void *) status);
 }

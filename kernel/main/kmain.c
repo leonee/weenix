@@ -131,9 +131,17 @@ bootstrap(int arg1, void *arg2)
 
     proc_t *idle_proc = proc_create(name);
 
+    if (idle_proc == NULL){
+        panic("idle proc is NULL :( \n");
+    }
+
     KASSERT(idle_proc->p_pid == 0);
 
     kthread_t *idle_thread = kthread_create(idle_proc, idleproc_run, NULL, NULL);
+
+    if (idle_thread == NULL){
+        panic("idle thread is NULL :( \n");
+    }
 
     curproc = idle_proc;
     curthr = idle_thread;
@@ -164,6 +172,11 @@ idleproc_run(int arg1, void *arg2)
 
     /* create init proc */
     kthread_t *initthr = initproc_create();
+
+    if (initthr == NULL){
+        panic("couldn't create init proc\n");
+    }
+
     init_call_all();
     GDB_CALL_HOOK(initialized);
 
@@ -233,6 +246,10 @@ static kthread_t *
 initproc_create(void)
 {
     proc_t *initproc = proc_create("init proc");
+
+    if (initproc == NULL){
+        return NULL;
+    }
 
     KASSERT(initproc->p_pid == (pid_t) 1 && "initproc pid isn't 1");
 
