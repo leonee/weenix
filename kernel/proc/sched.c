@@ -121,7 +121,7 @@ sched_cancellable_sleep_on(ktqueue_t *q)
     sched_switch();
 
     if (curthr->kt_cancelled == 1){
-        return -ECHILD;
+        return -EINTR;
     } else {
         return 0;
     }

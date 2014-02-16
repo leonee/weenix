@@ -5,4 +5,7 @@ in cleanup_child_proc()
     - pt_destroy_pagedir() is causing things to freak
       the fuck out. What should I do instead?
 
+in kmutex_lock_cancellabe()
+    - what happens if you were cancelled *before* locking the mutex?
+
 Check for things returning null

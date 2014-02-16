@@ -4,6 +4,7 @@
 #include "globals.h"
 #include "util/debug.h"
 #include "errno.h"
+#include "proc/kmutex.h"
 
 #define NUM_PROCS 3
 
@@ -30,7 +31,7 @@ static int in_child_list(proc_t *myproc){
  * Should be called from the init proc 
  */
 static void test_proc_create(){
-    dbg_print("testing proc_create\n");
+    dbg(DBG_TEST, "testing proc_create\n");
 
     proc_t *myproc = proc_create("myproc");
 
@@ -62,8 +63,8 @@ static void test_proc_create(){
  * A simple function
  */
 static void * simple_function(int arg1, void *arg2){
-    dbg_print("Running a simple method from test thread %d\n", arg1);
-    dbg_print("Exiting a simple method from test thread %d\n", arg1);
+    dbg(DBG_TEST, "Running a simple method from test thread %d\n", arg1);
+    dbg(DBG_TEST, "Exiting a simple method from test thread %d\n", arg1);
 
     return NULL;
 }
@@ -139,19 +140,19 @@ static void test_do_waitpid_no_child(){
 static void * test_do_exit_and_do_waitpid(int arg1, void *arg2){
     int status;
 
-    dbg_print("testing do_waitpid on an invalid PID\n");
+    dbg(DBG_TEST, "testing do_waitpid on an invalid PID\n");
     KASSERT(do_waitpid(-1, 0, &status) == -ECHILD);
 
-    dbg_print("testing do_waitpid on an empty child list\n");
+    dbg(DBG_TEST, "testing do_waitpid on an empty child list\n");
     KASSERT(do_waitpid(5, 0, &status) == -ECHILD);
 
-    dbg_print("testing do_waitpid with pid == -1\n");
+    dbg(DBG_TEST, "testing do_waitpid with pid == -1\n");
     test_do_waitpid(ANY);
 
-    dbg_print("testing do waitpid with specific pids\n");
+    dbg(DBG_TEST, "testing do waitpid with specific pids\n");
     test_do_waitpid(SPECIFIC);
 
-    dbg_print("testing do_waitpid with non-child pid\n");
+    dbg(DBG_TEST, "testing do_waitpid with non-child pid\n");
     test_do_waitpid_no_child();
 
     dbg(DBG_TESTPASS, "all do_waitpid tests passed!\n");
@@ -160,9 +161,9 @@ static void * test_do_exit_and_do_waitpid(int arg1, void *arg2){
 }
 
 static void * sleep_function(int arg1, void *arg2){
-    dbg_print("going to sleep...\n");
+    dbg(DBG_TEST, "going to sleep...\n");
     sched_cancellable_sleep_on((ktqueue_t *) arg2);
-    dbg_print("awoken from sleep!\n");
+    dbg(DBG_TEST, "awoken from sleep!\n");
 
     return NULL;
 }
@@ -173,7 +174,7 @@ static void yield(){
 }
 
 static void test_kthread_cancel(){
-    dbg_print("testing kthread_cancel\n");
+    dbg(DBG_TEST, "testing kthread_cancel\n");
 
     proc_t *test_proc = proc_create("kthread_cancel_test_proc");
     kthread_t *test_thread = kthread_create(test_proc, sleep_function, NULL,
@@ -196,7 +197,7 @@ static void test_kthread_cancel(){
 }
 
 static void test_proc_kill(){
-    dbg_print("testing proc_kill\n");
+    dbg(DBG_TEST, "testing proc_kill\n");
 
     proc_t *test_proc = proc_create("proc_kill_test_proc");
     kthread_t *test_thread = kthread_create(test_proc, sleep_function, NULL,
@@ -256,10 +257,10 @@ static void * test_proc_kill_all_func(int arg1, void *arg2){
 }
 
 static void test_proc_kill_all(){
-    dbg_print("testing proc_kill_all when called from init proc\n");
+    dbg(DBG_TEST, "testing proc_kill_all when called from init proc\n");
     test_proc_kill_all_func(NULL, NULL);
 
-    dbg_print("testing proc_kill_all when called from a different proc\n");
+    dbg(DBG_TEST, "testing proc_kill_all when called from a different proc\n");
 
     proc_t *test_proc = proc_create("proc_kill_all_func caller");
     kthread_t *test_thread = kthread_create(test_proc, test_proc_kill_all_func, 
@@ -284,6 +285,97 @@ static void test_proc_kill_all(){
     dbg(DBG_TESTPASS, "all proc_kill_all tests passed!\n");
 }
 
+static void * lock_kmutex_func(int arg1, void *arg2){
+
+    kmutex_t *m = (kmutex_t *) arg2;
+
+    kmutex_lock(m);
+    kmutex_unlock(m);
+
+    return NULL;
+}
+
+static void test_normal_locking(){
+    dbg(DBG_TEST, "testing normal mutex behavior\n");
+
+    kmutex_t m;
+    kmutex_init(&m);
+
+    proc_t *kmutex_proc = proc_create("kmutex_test_proc");
+    kthread_t *kmutex_thread = kthread_create(kmutex_proc, lock_kmutex_func,
+                                          NULL, (void *) &m);
+
+    sched_make_runnable(kmutex_thread);
+
+    kmutex_lock(&m);
+    
+    /* let kmutex_proc attempt to lock the mutex */
+    yield();
+
+    kmutex_unlock(&m);
+
+    /* lock and unlock the mutex with nobody on it's wait queue */
+    kmutex_lock(&m);
+    kmutex_unlock(&m);
+
+    int status;
+    do_waitpid(kmutex_proc->p_pid, 0, &status);
+
+    dbg(DBG_TESTPASS, "normal kmutex tests passed!\n");
+}
+
+/* The thread executing this MUST be cancelled before it succesfully 
+ * obtains the mutex. Otherwise, bad things will happen
+ */
+static void * cancellable_lock_kmutex(int arg1, void *arg2){
+
+    kmutex_t *m = (kmutex_t *) arg2;
+
+    int lock_result = kmutex_lock_cancellable(m);
+    
+    KASSERT(lock_result == -EINTR);
+    KASSERT(m->km_holder == NULL);
+    KASSERT(sched_queue_empty(&m->km_waitq));
+
+    return NULL;
+}
+
+static void test_locking_and_cancelling(){
+    dbg(DBG_TEST, "testing kmutex behavior with cancellation\n");
+
+    kmutex_t m;
+    kmutex_init(&m);
+
+    proc_t *kmutex_proc = proc_create("kmutex_sleep_test_proc");
+    kthread_t *kmutex_thread =  kthread_create(kmutex_proc, 
+                                        cancellable_lock_kmutex,
+                                        NULL, 
+                                        (void *) &m);
+
+    sched_make_runnable(kmutex_thread);
+
+    kmutex_lock(&m);
+
+    /* let kmutex_proc attempt to lock the mutex */
+    yield();
+
+    kthread_cancel(kmutex_thread, 0);
+
+    kmutex_unlock(&m);
+
+    int status;
+    do_waitpid(kmutex_proc->p_pid, 0, &status);
+
+    dbg(DBG_TESTPASS, "kmutex cancellation tests passed!\n");
+}
+
+static void test_kmutex(){
+    test_normal_locking();
+    test_locking_and_cancelling();
+
+    dbg(DBG_TESTPASS, "kmutex tests passed!\n");
+}
+
 void run_proc_tests(){
 
     test_proc_create();
@@ -302,10 +394,7 @@ void run_proc_tests(){
     test_proc_kill();
     test_proc_kill_all();
 
+    test_kmutex();
+
     dbg(DBG_TESTPASS, "all proc-related tests passed!\n");
 }
-
-
-/* TODO:
-   - mutexes
-   */

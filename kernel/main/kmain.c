@@ -256,11 +256,11 @@ static void *
 initproc_run(int arg1, void *arg2)
 {
     run_proc_tests();
-
+/*
    list_t *children = &curproc->p_children; 
    list_link_t *link;
 
-   /*
+   
    dbg_print("initproc children: \n");
    for (link = children->l_next; link != children; link = link->l_next){
        proc_t *p = list_item(link, proc_t, p_child_link);

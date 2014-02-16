@@ -145,7 +145,7 @@ static void reparent_proc(proc_t *p){
  */
 /* TODO: make sure this works */
 static void reparent_all_children(list_t *children){
-    dbg_print("reparenting children. curproc = %s\n", curproc->p_comm);
+    dbg(DBG_PROC, "reparenting children. curproc = %s\n", curproc->p_comm);
     
     list_link_t *link = children->l_next;
 
