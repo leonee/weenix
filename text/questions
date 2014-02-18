@@ -17,3 +17,10 @@ in tty_attach()
     - what does it mean to "allocate any memory you will need later"?
     - what should I initialize all the ints to?
 
+in n_tty_receive_char()
+    - how to I make it know when the buffer is full, vs. when I just started?
+
+in n_tty_read()
+    - what to do if we're cancelled? Is this significant? 
+    - is CTRL+D just not put in the buffer?
+
