@@ -159,7 +159,6 @@ tty_create(tty_driver_t *driver, int id)
  */
 void
 tty_global_driver_callback(void *arg, char c) {
-    dbg(DBG_TERM, "booooooooooooom\n");
     tty_device_t *tty = (tty_device_t *) arg;
     tty_ldisc_t *ldisc = tty->tty_ldisc;
     struct tty_ldisc_ops *ops = ldisc->ld_ops;
