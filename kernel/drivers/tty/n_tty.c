@@ -182,6 +182,39 @@ n_tty_read(tty_ldisc_t *ldisc, void *buf, int len)
     return chars_read;
 }
 
+static void print_buffer(struct n_tty *tty){
+
+    dbg(DBG_TERM, "*************************\n");
+
+    int i;
+
+    for (i = 0; i < TTY_BUF_SIZE; i++){
+        char to_print = !IS_NEWLINE(tty->ntty_inbuf[i]) ? tty->ntty_inbuf[i] : 'N';
+        int rt = tty->ntty_rawtail;
+        int ct = tty->ntty_ckdtail;
+        int rh = tty->ntty_rhead;
+
+        if (rt == i && ct == i && rh == i){
+            dbg(DBG_TERM, "%c(rt)(ct)(rh)\n", to_print);
+        } else if (rt == i && ct == i) {
+            dbg(DBG_TERM, "%c(rt)(ct)\n", to_print);
+        } else if (rt == i && rh == i) {
+            dbg(DBG_TERM, "%c(rt)(rh)\n", to_print);
+        } else if (ct == i && rh == i) {
+            dbg(DBG_TERM, "%c(ct)(rh)\n", to_print);
+        } else if (rt == i) {
+            dbg(DBG_TERM, "%c(rt)\n", to_print);
+        } else if (ct == i) {
+            dbg(DBG_TERM, "%c(ct)\n", to_print);
+        } else if (rh == i) {
+            dbg(DBG_TERM, "%c(rh)\n", to_print);
+        } else {
+            dbg(DBG_TERM, "%c\n", to_print);
+        }
+    } 
+
+    dbg(DBG_TERM, "*************************\n");
+}
 
 /*
  * The tty subsystem calls this when the tty driver has received a
@@ -211,6 +244,8 @@ n_tty_receive_char(tty_ldisc_t *ldisc, char c) {
 
     struct n_tty *tty = ldisc_to_ntty(ldisc);
 
+    const char *to_ret = n_tty_process_char(ldisc, c);
+
     int buffer_full = buf_full(tty);
 
     if (IS_BACKSPACE(c)) {
@@ -234,7 +269,10 @@ n_tty_receive_char(tty_ldisc_t *ldisc, char c) {
         tty->ntty_inbuf[tty->ntty_rawtail] = c;
     }
 
-    return n_tty_process_char(ldisc, c);
+    /*
+    print_buffer(tty);
+    */
+    return to_ret;
 }
 
 /*
