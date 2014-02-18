@@ -42,7 +42,10 @@
 #include "fs/fcntl.h"
 #include "fs/stat.h"
 
+#include "test/proctest.h"
+
 #include "test/kshell/kshell.h"
+
 
 GDB_DEFINE_HOOK(boot)
 GDB_DEFINE_HOOK(initialized)
@@ -274,6 +277,8 @@ initproc_run(int arg1, void *arg2)
 {
     run_proc_tests();
 
+    kshell_add_command("proctest", proctests, "tests proc code");
+
     int err = 0;
     kshell_t *ksh = kshell_create(0);
     KASSERT(ksh && "did not create a kernel shell as expected");
@@ -294,6 +299,7 @@ initproc_run(int arg1, void *arg2)
        dbg_print("%s\n", p->p_comm);
    }
    */
+    return NULL;
 }
 
 /**

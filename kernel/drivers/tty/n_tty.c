@@ -167,6 +167,7 @@ n_tty_read(tty_ldisc_t *ldisc, void *buf, int len)
         /* if we've gotten here, then there's at least one character to read */
         KASSERT(!read_buf_empty(tty));
 
+        tty->ntty_rhead = (tty->ntty_rhead + 1) % TTY_BUF_SIZE;
         last_char_read = tty->ntty_inbuf[tty->ntty_rhead];
 
         if (!IS_EOM(last_char_read)){
@@ -175,7 +176,6 @@ n_tty_read(tty_ldisc_t *ldisc, void *buf, int len)
         }
 
         chars_read++;
-        tty->ntty_rhead = (tty->ntty_rhead + 1) % TTY_BUF_SIZE;
     }
    
     kmutex_unlock(&tty->ntty_rlock);
@@ -264,14 +264,16 @@ n_tty_receive_char(tty_ldisc_t *ldisc, char c) {
         
         tty->ntty_inbuf[new_rawtail] = '\n';
 
+        sched_wakeup_on(&tty->ntty_rwaitq);
+
     } else {
         tty->ntty_rawtail = (tty->ntty_rawtail + 1) % TTY_BUF_SIZE;
         tty->ntty_inbuf[tty->ntty_rawtail] = c;
     }
 
-    /*
+    
     print_buffer(tty);
-    */
+    
     return to_ret;
 }
 

@@ -361,7 +361,7 @@ error:
 
 int kshell_execute_next(kshell_t *ksh)
 {
-        static const char *kshell_prompt = "kshell$";
+        static const char *kshell_prompt = "kanyeshell$";
 
         int nbytes, retval;
         kshell_command_t *cmd;

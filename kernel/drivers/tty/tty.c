@@ -232,7 +232,7 @@ tty_write(bytedev_t *dev, int offset, const void *buf, int count)
 
     int i;
     for (i = 0; i < count; i++){
-       const char *to_echo = ldisc->ld_ops->receive_char(ldisc, buffer[i]);
+       const char *to_echo = ldisc->ld_ops->process_char(ldisc, buffer[i]);
 
        if (to_echo != NULL){
            tty_echo(tty_driver, to_echo);

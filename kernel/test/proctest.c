@@ -5,6 +5,7 @@
 #include "util/debug.h"
 #include "errno.h"
 #include "proc/kmutex.h"
+#include "test/kshell/kshell.h"
 
 #define NUM_PROCS 3
 
@@ -397,4 +398,9 @@ void run_proc_tests(){
     test_kmutex();
 
     dbg(DBG_TESTPASS, "all proc-related tests passed!\n");
+}
+
+int proctests(kshell_t *k, int argc, char **argv){
+    run_proc_tests();
+    return 0;
 }
