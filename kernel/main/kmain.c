@@ -273,6 +273,15 @@ static void *
 initproc_run(int arg1, void *arg2)
 {
     run_proc_tests();
+
+    int err = 0;
+    kshell_t *ksh = kshell_create(0);
+    KASSERT(ksh && "did not create a kernel shell as expected");
+
+    /* Run kshell commands until user exits */
+    while ((err = kshell_execute_next(ksh)) > 0);
+    KASSERT(err == 0 && "kernel shell exited with an error\n");
+    kshell_destroy(ksh);
 /*
    list_t *children = &curproc->p_children; 
    list_link_t *link;
