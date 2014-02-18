@@ -264,7 +264,7 @@ n_tty_process_char(tty_ldisc_t *ldisc, char c) {
         ret_text[0] = c;
         ret_text[1] = SPACE;
         ret_text[2] = c;
-        ret_text[4] = '\0';
+        ret_text[3] = '\0';
 
     } else if (buffer_full){
         dbg(DBG_TERM, "out of buffer space\n");
@@ -289,7 +289,7 @@ n_tty_process_char(tty_ldisc_t *ldisc, char c) {
         ret_text[2] = '\0';
 
     }  else {
-        dbg(DBG_TERM, "received a char %c\n", c);
+        dbg(DBG_TERM, "received a char %c/%x\n", c, c);
         ret_text = kmalloc(2 * sizeof(char));
 
         if (ret_text == NULL){
