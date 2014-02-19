@@ -1,24 +1,11 @@
-in kthread_exit()
-    - are we not supposed to set kt_state here?
-        
 in cleanup_child_proc()
     - pt_destroy_pagedir() is causing things to freak
       the fuck out. What should I do instead?
-
-in kmutex_lock_cancellabe()
-    - what happens if you were cancelled *before* locking the mutex?
 
 ------------------------------------------------------------
 
 in tty_create()
     - I'm bad at C. Is it okay to use dot notation?
-
-in tty_attach()
-    - what does it mean to "allocate any memory you will need later"?
-    - what should I initialize all the ints to?
-
-in n_tty_receive_char()
-    - how to I make it know when the buffer is full, vs. when I just started?
 
 in n_tty_read()
     - what to do if we're cancelled? Is this significant? 
@@ -30,7 +17,10 @@ in do_operation()
         - am I doing this right?
 
     - In step 9
-        - howdafuq?
+        - what do we do with the error, if there is one?
 
 in ata_intr()
     - Do I just call sched_wakeup_on()?
+
+In general:
+    - how do I test all of this?
