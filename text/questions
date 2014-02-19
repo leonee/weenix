@@ -24,3 +24,13 @@ in n_tty_read()
     - what to do if we're cancelled? Is this significant? 
     - is CTRL+D just not put in the buffer?
 
+in do_operation()
+    - In step 3:
+        - is this the right number?
+        - am I doing this right?
+
+    - In step 9
+        - howdafuq?
+
+in ata_intr()
+    - Do I just call sched_wakeup_on()?

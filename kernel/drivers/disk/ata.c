@@ -393,8 +393,7 @@ ata_intr_wrapper(regs_t *regs)
 static int
 ata_read(blockdev_t *bdev, char *data, blocknum_t blocknum, unsigned int count)
 {
-        NOT_YET_IMPLEMENTED("DRIVERS: ata_read");
-        return -1;
+    return bdev->bd_ops->read_block(bdev, data, blocknum, count);
 }
 
 /**
@@ -505,8 +504,54 @@ ata_write(blockdev_t *bdev, const char *data, blocknum_t blocknum, unsigned int 
 static int
 ata_do_operation(ata_disk_t *adisk, char *data, blocknum_t blocknum, int write)
 {
-        NOT_YET_IMPLEMENTED("DRIVERS: ata_do_operation");
-        return -1;
+
+    uint8_t channel = adisk->ata_channel;
+
+    /* step 1: Lock the mutex and set the IPL */
+    kmutex_lock(&adisk->ata_mutex);
+    uint8_t old_ipl = intr_getipl();
+    intr_setipl(INTR_DISK_SECONDARY);
+
+    /* step 2: Initialize DMA for this operation */
+    dma_load(channel, (void *) data, adisk->ata_size * ATA_SECTOR_SIZE);
+
+    /* step 3: Write to the disk's registers to tell it
+     * the number of sectors */
+    ata_outb_reg(channel, ATA_REG_SECCOUNT0, adisk->ata_size);
+    ata_outb_reg(channel, ATA_REG_LBA0,  blocknum & 0x000000ff);
+    ata_outb_reg(channel, ATA_REG_LBA1, (blocknum & 0x0000ff00) >> 8);
+    ata_outb_reg(channel, ATA_REG_LBA2, (blocknum & 0x00ff0000) >> 16);
+    
+    /* step 4: Write to the disk's registers to tell it the operation type */
+    if (write){
+        ata_outb_reg(channel, ATA_REG_COMMAND, ATA_CMD_WRITE_DMA);
+    } else {
+        ata_outb_reg(channel, ATA_REG_COMMAND, ATA_CMD_READ_DMA);
+    }
+
+
+    /* step 5: pause */
+    ata_pause(channel);
+
+    /* step 6: start the DMA operation */
+    dma_start(channel, ATA_CHANNELS[channel].atac_busmaster, write);
+
+    /* step 7: wait for DMA operation to complete*/
+    sched_sleep_on(&adisk->ata_waitq);
+
+    /* step 8: read the status of the DMA operation */
+    uint8_t ret_status = ata_inb_reg(channel, ATA_REG_STATUS);
+
+    /* step 9: check the status to see if the error bit is set */
+    /* TODO: figure out how to do this */
+
+    /* step 10: alert the DMA controller that we have received the interrupt */
+    dma_reset(ATA_CHANNELS[channel].atac_busmaster);
+
+    /* step 11: restore IPL, release locks, and return status */
+    intr_setipl(old_ipl);
+    kmutex_unlock(&adisk->ata_mutex);
+    return ret_status;
 }
 
 /**
@@ -520,7 +565,7 @@ ata_do_operation(ata_disk_t *adisk, char *data, blocknum_t blocknum, int write)
 static void
 ata_intr(regs_t *regs, void *arg)
 {
-        NOT_YET_IMPLEMENTED("DRIVERS: ata_intr");
+    sched_wakeup_on(&((ata_disk_t *) arg)->ata_waitq);
 }
 
 /*
