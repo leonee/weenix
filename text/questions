@@ -22,6 +22,7 @@ in do_operation()
 in ata_read()/ata_write()
     - how do we figure out where next to write into the buffer?
     - is there a more specific error code that we need to return?
+    - what happens if we try to read/write for a shitton of blocks?
 
 in ata_intr()
     - Do I just call sched_wakeup_on()?

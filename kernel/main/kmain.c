@@ -43,6 +43,7 @@
 #include "fs/stat.h"
 
 #include "test/proctest.h"
+#include "test/atatest.h"
 
 #include "test/kshell/kshell.h"
 
@@ -278,6 +279,9 @@ initproc_run(int arg1, void *arg2)
     run_proc_tests();
 
     kshell_add_command("proctest", proctests, "tests proc code");
+
+    kshell_add_command("ar", kshell_ata_read, "tests ata_read");
+    kshell_add_command("aw", kshell_ata_write, "tests ata_write");
 
     int err = 0;
     kshell_t *ksh = kshell_create(0);
