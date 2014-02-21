@@ -393,8 +393,20 @@ ata_intr_wrapper(regs_t *regs)
 static int
 ata_read(blockdev_t *bdev, char *data, blocknum_t blocknum, unsigned int count)
 {
-    NOT_YET_IMPLEMENTED("DRIVERS: ata_read");
-    return -1;
+    int ret_code = 0;
+    ata_disk_t *adisk = bd_to_ata(bdev);
+
+    unsigned int i = 0;
+    while (i < count){
+
+        /* ata_do_operation returns 0 on sucess and < 0 on error, so if
+         * we add ever time, we'll only return < 0 on error, and 0 otherwise */
+        ret_code += ata_do_operation(adisk, data, (blocknum + i), 0);
+        data += adisk->ata_sectors_per_block * ATA_SECTOR_SIZE;
+        i++;
+    }
+
+    return ret_code;
 }
 
 /**
@@ -410,8 +422,18 @@ ata_read(blockdev_t *bdev, char *data, blocknum_t blocknum, unsigned int count)
 static int
 ata_write(blockdev_t *bdev, const char *data, blocknum_t blocknum, unsigned int count)
 {
-        NOT_YET_IMPLEMENTED("DRIVERS: ata_write");
-        return -1;
+    int ret_code = 0;
+    ata_disk_t *adisk = bd_to_ata(bdev);
+
+    unsigned int i = 0;
+    while (i < count){
+
+        ret_code += ata_do_operation(adisk, data, (blocknum + i), 1);
+        data += adisk->ata_sectors_per_block * ATA_SECTOR_SIZE;
+        i++;
+    }
+
+    return ret_code;
 }
 
 /**
@@ -514,7 +536,6 @@ ata_do_operation(ata_disk_t *adisk, char *data, blocknum_t blocknum, int write)
     kmutex_lock(&adisk->ata_mutex);
    
     /* step 2: Initialize DMA for this operation */
-    /* TODO figure out where size comes from */
     dma_load(channel, (void *) data, adisk->ata_sectors_per_block * ATA_SECTOR_SIZE);
 
     /* step 3: Write to the disk's registers to tell it
@@ -530,7 +551,6 @@ ata_do_operation(ata_disk_t *adisk, char *data, blocknum_t blocknum, int write)
     } else {
         ata_outb_reg(channel, ATA_REG_COMMAND, ATA_CMD_READ_DMA);
     }
-
 
     /* step 5: pause */
     ata_pause(channel);
