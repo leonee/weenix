@@ -169,10 +169,6 @@ static void * sleep_function(int arg1, void *arg2){
     return NULL;
 }
 
-static void yield(){
-    sched_make_runnable(curthr);
-    sched_switch();
-}
 
 static void test_kthread_cancel(){
     dbg(DBG_TEST, "testing kthread_cancel\n");

@@ -146,3 +146,6 @@ size_t proc_info(const void *arg, char *buf, size_t osize);
  * @return the remaining size of the buffer
  */
 size_t proc_list_info(const void *arg, char *buf, size_t osize);
+
+/* yield the processor */
+void yield();

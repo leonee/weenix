@@ -16,7 +16,11 @@
 
 /* helpful macros */
 #define EOFC            '\x4'
+
+/*
+ * This is now defined in n_tty.h"
 #define TTY_BUF_SIZE    128
+*/
 #define ldisc_to_ntty(ldisc) \
         CONTAINER_OF(ldisc, n_tty_t, ntty_ldisc)
 
@@ -182,7 +186,7 @@ n_tty_read(tty_ldisc_t *ldisc, void *buf, int len)
     return chars_read;
 }
 
-static void print_buffer(struct n_tty *tty){
+void print_buffer(struct n_tty *tty){
 
     dbg(DBG_TERM, "*************************\n");
 
@@ -262,7 +266,7 @@ n_tty_receive_char(tty_ldisc_t *ldisc, char c) {
         tty->ntty_rawtail = new_rawtail;
         tty->ntty_ckdtail = new_rawtail;
         
-        tty->ntty_inbuf[new_rawtail] = '\n';
+        tty->ntty_inbuf[new_rawtail] = c;
 
         sched_wakeup_on(&tty->ntty_rwaitq);
 
@@ -272,7 +276,7 @@ n_tty_receive_char(tty_ldisc_t *ldisc, char c) {
     }
 
     
-    print_buffer(tty);
+   /* print_buffer(tty);*/
     
     return to_ret;
 }

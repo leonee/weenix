@@ -27,3 +27,5 @@ void tty_init(void);
  * @return a newly allocated tty or NULL on error
  */
 tty_device_t *tty_create(struct tty_driver *driver, int id);
+
+void tty_global_driver_callback(void *arg, char c); 

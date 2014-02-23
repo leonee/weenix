@@ -71,6 +71,11 @@ failed:
         }
 }
 
+void yield(){
+    sched_make_runnable(curthr);
+    sched_switch();
+}
+
 /*
  * The new process, although it isn't really running since it has no
  * threads, should be in the PROC_RUNNING state.

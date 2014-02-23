@@ -24,7 +24,7 @@
  * which received the key press=
  * @param c the character received
  */
-static void tty_global_driver_callback(void *arg, char c);
+/*void tty_global_driver_callback(void *arg, char c);*/
 
 /**
  * Reads a specified maximum number of bytes from a tty into a given

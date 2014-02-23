@@ -16,9 +16,6 @@ in do_operation()
         - is this the right number?
         - am I doing this right?
 
-    - In step 9
-        - what do we do with the error, if there is one?
-
 in ata_read()/ata_write()
     - how do we figure out where next to write into the buffer?
     - is there a more specific error code that we need to return?
