@@ -347,9 +347,9 @@ static void cleanup_child_proc(proc_t *p){
     }
  
    list_remove(&p->p_child_link); 
-    /*
-    pt_destroy_pagedir(p->p_pagedir);
-    */
+   
+   pt_destroy_pagedir(p->p_pagedir);
+   slab_obj_free(proc_allocator, (void *) p);
 }
 
 /**

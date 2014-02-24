@@ -16,6 +16,8 @@ in do_operation()
         - is this the right number?
         - am I doing this right?
 
+    - Am I resetting correctly?
+
 in ata_read()/ata_write()
     - how do we figure out where next to write into the buffer?
     - is there a more specific error code that we need to return?

@@ -48,6 +48,8 @@
 #include "test/memdevtest.h"
 
 #include "test/kshell/kshell.h"
+#include "../test/kshell/priv.h"
+#include "../test/kshell/command.h"
 
 
 GDB_DEFINE_HOOK(boot)
@@ -264,6 +266,21 @@ initproc_create(void)
     return init_thread;
 }
 
+static void destroy_kshell_commands(){
+    list_t *commands = &kshell_commands_list;
+    list_link_t *link = commands->l_next;
+
+    while (link != commands){
+        kshell_command_t *cmd = list_item(link, kshell_command_t, kc_commands_link);
+
+        link = link->l_next;
+
+         if (cmd != NULL){
+            kshell_command_destroy(cmd);
+        }
+    }
+}
+
 /**
  * The init thread's function changes depending on how far along your Weenix is
  * developed. Before VM/FI, you'll probably just want to have this run whatever
@@ -279,9 +296,9 @@ static void *
 initproc_run(int arg1, void *arg2)
 {
     run_proc_tests();
-    run_tty_tests(); 
+    /*run_tty_tests(); */
     run_memdev_tests();
-    run_ata_tests(); 
+    /*run_ata_tests(); */
 
     kshell_add_command("proctest", proctests, "tests proc code");
 
@@ -296,6 +313,8 @@ initproc_run(int arg1, void *arg2)
     while ((err = kshell_execute_next(ksh)) > 0);
     KASSERT(err == 0 && "kernel shell exited with an error\n");
     kshell_destroy(ksh);
+
+    destroy_kshell_commands();
 /*
    list_t *children = &curproc->p_children; 
    list_link_t *link;

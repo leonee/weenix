@@ -370,5 +370,7 @@ int kshell_ata_write(kshell_t *k, int argc, char **argv){
 
     int result = bd->bd_ops->write_block(bd, data, blocknum, 1);
 
+    page_free((void *) data);
+
     return result;
 }
