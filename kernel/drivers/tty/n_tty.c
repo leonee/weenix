@@ -164,7 +164,7 @@ n_tty_read(tty_ldisc_t *ldisc, void *buf, int len)
             if (read_buf_empty(tty)){
                 KASSERT(curthr->kt_cancelled == 1);
                 kmutex_unlock(&tty->ntty_rlock);
-                return 0;
+                return -EINTR;
             }
         }
 

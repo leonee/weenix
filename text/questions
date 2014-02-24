@@ -1,30 +1,4 @@
-in cleanup_child_proc()
-    - pt_destroy_pagedir() is causing things to freak
-      the fuck out. What should I do instead?
-
-------------------------------------------------------------
-
-in tty_create()
-    - I'm bad at C. Is it okay to use dot notation?
-
-in n_tty_read()
-    - what to do if we're cancelled? Is this significant? 
-    - is CTRL+D just not put in the buffer?
-
-in do_operation()
-    - In step 3:
-        - is this the right number?
-        - am I doing this right?
-
-    - Am I resetting correctly?
-
 in ata_read()/ata_write()
-    - how do we figure out where next to write into the buffer?
     - is there a more specific error code that we need to return?
-    - what happens if we try to read/write for a shitton of blocks?
 
-in ata_intr()
-    - Do I just call sched_wakeup_on()?
-
-in memdev_init()
-    - If we malloc this, where do we free it?
+    A: Break on error

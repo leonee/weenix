@@ -393,7 +393,6 @@ ata_intr_wrapper(regs_t *regs)
 static int
 ata_read(blockdev_t *bdev, char *data, blocknum_t blocknum, unsigned int count)
 {
-    int ret_code = 0;
     ata_disk_t *adisk = bd_to_ata(bdev);
 
     unsigned int i = 0;
@@ -401,12 +400,17 @@ ata_read(blockdev_t *bdev, char *data, blocknum_t blocknum, unsigned int count)
 
         /* ata_do_operation returns 0 on sucess and < 0 on error, so if
          * we add ever time, we'll only return < 0 on error, and 0 otherwise */
-        ret_code += ata_do_operation(adisk, data, (blocknum + i), 0);
+        int ret_code = ata_do_operation(adisk, data, (blocknum + i), 0);
+
+        if (ret_code != 0){
+            return ret_code;
+        }
+
         data += BLOCK_SIZE;
         i++;
     }
 
-    return ret_code;
+    return 0;
 }
 
 /**
@@ -422,7 +426,6 @@ ata_read(blockdev_t *bdev, char *data, blocknum_t blocknum, unsigned int count)
 static int
 ata_write(blockdev_t *bdev, const char *data, blocknum_t blocknum, unsigned int count)
 {
-    int ret_code = 0;
     ata_disk_t *adisk = bd_to_ata(bdev);
 
     char *to_write = data;
@@ -430,12 +433,17 @@ ata_write(blockdev_t *bdev, const char *data, blocknum_t blocknum, unsigned int 
     unsigned int i = 0;
     while (i < count){
 
-        ret_code += ata_do_operation(adisk, to_write, (blocknum + i), 1);
+        int ret_code = ata_do_operation(adisk, to_write, (blocknum + i), 1);
+
+        if (ret_code != 0){
+            return ret_code;
+        }
+
         to_write += BLOCK_SIZE;
         i++;
     }
 
-    return ret_code;
+    return 0;
 }
 
 /**
@@ -573,10 +581,10 @@ ata_do_operation(ata_disk_t *adisk, char *data, blocknum_t blocknum, int write)
     /* step 9: check the status to see if the error bit is set */
     if (operation_status & ATA_SR_ERR){
         ret_val = ata_inb_reg(channel, ATA_REG_ERROR);
-    } else {
-        /* step 10: alert the DMA controller that we have received the interrupt */
-        dma_reset(ATA_CHANNELS[channel].atac_busmaster);
     }
+
+    /* step 10: alert the DMA controller that we have received the interrupt */
+    dma_reset(ATA_CHANNELS[channel].atac_busmaster);
 
     /* step 11: restore IPL, release locks, and return status */
     kmutex_unlock(&adisk->ata_mutex);
