@@ -177,7 +177,7 @@ void test_single_rw(){
 
 void run_ata_tests(){ 
     test_single_rw();
-/*    test_multiple_threads();*/
+    test_multiple_threads();
     
     dbg(DBG_TESTPASS, "All ata tests passed!\n");
 }
@@ -276,6 +276,8 @@ int kshell_ata_write(kshell_t *k, int argc, char **argv){
         data[i] = input_text[i];
         i++;
     }
+
+    data[i] = '\0';
 
     int result = bd->bd_ops->write_block(bd, data, blocknum, 1);
 
