@@ -175,9 +175,98 @@ void test_single_rw(){
     dbg(DBG_TESTPASS, "all simple ata tests passed\n");
 }
 
+static void read_many_blocks(){
+    dbg(DBG_TEST, "reading from LOTS of blocks, one at a time\n");
+
+    blockdev_t *bd = blockdev_lookup(MKDEVID(1, 0));
+
+    char *writebuf = (char *) page_alloc();
+    char *readbuf = (char *) page_alloc();
+
+    KASSERT(writebuf != NULL && readbuf != NULL);
+
+    unsigned int i;
+    for (i = 0; i < BLOCK_SIZE; i++){
+        writebuf[i] = 'z';
+    }
+
+    dbg(DBG_TEST, "reading from blocks before writing them\n");
+    int j;
+    for (j = 0; j < 1024; j++){
+        int read_result = bd->bd_ops->read_block(bd, readbuf, j, 1);
+        KASSERT(read_result == 0);
+    }
+
+    dbg(DBG_TEST, "writing to all the blocks\n");
+
+    int k;
+    for (k = 0; k < 1024; k++){
+        int write_result = bd->bd_ops->write_block(bd, writebuf, k, 1);
+        KASSERT(write_result == 0);
+    }
+
+    dbg(DBG_TEST, "reading from all the written-to blocks\n");
+    int l;
+    for (l = 0; l < 1024; l++){
+        int read_result = bd->bd_ops->read_block(bd, readbuf, l, 1);
+        KASSERT(read_result == 0);
+
+        unsigned int m;
+        for (m = 0; m < BLOCK_SIZE; m++){
+            KASSERT(readbuf[m] == 'z');
+        }
+    }
+
+    page_free((void *) writebuf);
+    page_free((void *) readbuf);
+
+    dbg(DBG_TESTPASS, "single-block stress tests passed\n");
+}
+
+static void test_large_block_reads(){
+    blockdev_t *bd = blockdev_lookup(MKDEVID(1, 0));
+
+    int i;
+    for (i = 1; i < 129; i++){
+        char *readbuf = (char *) page_alloc_n(i);
+        char *writebuf = (char *) page_alloc_n(i);
+
+        int j;
+        for (j = 0; j < (i * BLOCK_SIZE); j++){
+            writebuf[j] = 'f';
+        }
+
+        int write_result = bd->bd_ops->write_block(bd, writebuf, 0, i);
+        KASSERT(write_result == 0);
+
+        int read_result = bd->bd_ops->read_block(bd, readbuf, 0, i);
+        KASSERT(read_result == 0);
+
+        int k;
+        for (k = 0; k < (i * BLOCK_SIZE); k++){
+            KASSERT(readbuf[k] == 'f');
+        }
+
+        page_free_n((void *) readbuf, i);
+        page_free_n((void *) writebuf, i);
+    }
+
+    dbg(DBG_TESTPASS, "large read stress tests passed\n");
+}
+
+static void stress_test(){
+    dbg(DBG_TEST, "stress testing ata reads and writes\n");
+
+    read_many_blocks();
+    test_large_block_reads();
+
+    dbg(DBG_TEST, "all stress tests passed\n");
+}
+
 void run_ata_tests(){ 
     test_single_rw();
     test_multiple_threads();
+    stress_test();
     
     dbg(DBG_TESTPASS, "All ata tests passed!\n");
 }
