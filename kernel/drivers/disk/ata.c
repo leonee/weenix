@@ -595,7 +595,7 @@ ata_do_operation(ata_disk_t *adisk, char *data, blocknum_t blocknum, int write)
 static void
 ata_intr(regs_t *regs, void *arg)
 {
-    sched_wakeup_on(&((ata_disk_t *) arg)->ata_waitq);
+    sched_wakeup_on(&(((ata_disk_t *) arg)->ata_waitq));
 }
 
 /*

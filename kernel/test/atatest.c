@@ -118,7 +118,7 @@ void test_multiple_threads(){
     page_free_n((void *) writebuf1, BLOCKS_TO_WRITE);
     page_free_n((void *) writebuf2, BLOCKS_TO_WRITE);
 
-    dbg(DBG_TEST | DBG_DISK, "All multi-threaded read/write tests passed\n");
+    dbg(DBG_TESTPASS, "All multi-threaded read/write tests passed\n");
 }
 
 static void simple_write(rw_args_t write_args){
@@ -166,20 +166,20 @@ void test_single_rw(){
  
     unsigned int j;
     for (j = 0; j < BLOCK_SIZE; j++){
-        KASSERT(readbuf[j] == 't');
+        KASSERT(readbuf[j] == 'o');
     }
 
     page_free((void *) readbuf);
     page_free((void *) writebuf);
 
-    dbg(DBG_TEST | DBG_DISK, "all simple ata tests passed\n");
+    dbg(DBG_TESTPASS, "all simple ata tests passed\n");
 }
 
 void run_ata_tests(){ 
     test_single_rw();
 /*    test_multiple_threads();*/
     
-    dbg(DBG_TEST, "All ata tests passed!\n");
+    dbg(DBG_TESTPASS, "All ata tests passed!\n");
 }
 
 int get_digit(char *s){
