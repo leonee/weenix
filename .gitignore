@@ -1,6 +1,7 @@
 bochsout.txt
 inittmp.gdb
 commands.gdb
+cscope.out
 
 # normal build system output
 disk0.img
