@@ -2,6 +2,7 @@ bochsout.txt
 inittmp.gdb
 commands.gdb
 cscope.out
+kernel/weenix
 
 # normal build system output
 disk0.img
