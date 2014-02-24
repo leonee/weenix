@@ -68,10 +68,10 @@ do
 	echo "source $file" >> "$GDB_COMM_INIT"
 done
 # XXX disabled until gdb version checks are written
-## cat "$KERN_DIR/$GDBCOMM" | grep "\.py$" | while read file
-## do
-## 	echo "source $file" >> "$GDB_COMM_INIT"
-## done
+cat "$KERN_DIR/$GDBCOMM" | grep "\.py$" | while read file
+do
+	echo "source $file" >> "$GDB_COMM_INIT"
+done
 
 case $machine in
 	qemu)
@@ -86,7 +86,7 @@ case $machine in
 			gdb)
 				# Build the gdb initialization script
 				echo "target remote localhost:$GDB_PORT" > $GDB_TMP_INIT
-				echo "python sys.path.append(\"$(pwd)\")" >> $GDB_TMP_INIT
+				echo "python sys.path.append(\"$(pwd)/python\")" >> $GDB_TMP_INIT
 
 				$GDB_TERM -e $QEMU $QEMU_FLAGS -m "$MEMORY" -cdrom "$KERN_DIR/$ISO_IMAGE" disk0.img -serial stdio -s -S -daemonize
 				$GDB $GDB_FLAGS
