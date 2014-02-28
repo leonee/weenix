@@ -1,4 +1,9 @@
-in ata_read()/ata_write()
-    - is there a more specific error code that we need to return?
+in vref()
+    - what does it mean for a filesystem's linkcount to be 0? 
 
-    A: Break on error
+in lookup()
+    -dafuq does lookup return?
+
+in open_namev()
+    - what do we do about errors?
+    - should we be locking?

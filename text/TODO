@@ -45,3 +45,26 @@
     drivers/tty/tty.c:160                       tty_echo()  DRIVERS
     drivers/tty/tty.c:171                       tty_read()  DRIVERS
     drivers/tty/tty.c:187                      tty_write()  DRIVERS
+
+---
+            fs/namev.c:28                         lookup()      VFS
+            fs/namev.c:55                      dir_namev()      VFS
+            fs/namev.c:70                     open_namev()      VFS
+             fs/open.c:76                        do_open()      VFS
+      fs/vfs_syscall.c:44                        do_read()      VFS
+      fs/vfs_syscall.c:59                       do_write()      VFS
+      fs/vfs_syscall.c:73                       do_close()      VFS
+      fs/vfs_syscall.c:96                         do_dup()      VFS
+     fs/vfs_syscall.c:112                        do_dup2()      VFS
+     fs/vfs_syscall.c:144                       do_mknod()      VFS
+     fs/vfs_syscall.c:165                       do_mkdir()      VFS
+     fs/vfs_syscall.c:190                       do_rmdir()      VFS
+     fs/vfs_syscall.c:210                      do_unlink()      VFS
+     fs/vfs_syscall.c:236                        do_link()      VFS
+     fs/vfs_syscall.c:251                      do_rename()      VFS
+     fs/vfs_syscall.c:271                       do_chdir()      VFS
+     fs/vfs_syscall.c:293                     do_getdent()      VFS
+     fs/vfs_syscall.c:310                       do_lseek()      VFS
+     fs/vfs_syscall.c:328                        do_stat()      VFS
+           fs/vnode.c:437              special_file_read()      VFS
+           fs/vnode.c:450             special_file_write()      VFS

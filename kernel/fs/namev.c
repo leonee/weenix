@@ -25,8 +25,34 @@
 int
 lookup(vnode_t *dir, const char *name, size_t len, vnode_t **result)
 {
-        NOT_YET_IMPLEMENTED("VFS: lookup");
+    if (dir->vn_ops->lookup == NULL){
+        return -ENOTDIR;
+    }
+
+    KASSERT(name != NULL);
+
+    if (len == 1 && name[0] == '.'){
+        *result = dir;
+        vref(*result);
+        dbg(DBG_VNREF, "incremented ref count on %d\n", (*result)->vn_vno);
         return 0;
+    }
+    
+    if (len == 2 && name[0] == '.' && name[1] == '.'){
+        dbg(DBG_VFS, "enountered the dir '..'\n");
+    }
+
+    int lookup_result = dir->vn_ops->lookup(dir, name, len, result);
+    
+    dbg(DBG_VFS, "result of lookup: %d\n", lookup_result);
+
+    KASSERT(lookup_result == 0);
+    KASSERT(result != NULL);
+
+    vref(*result);
+    dbg(DBG_VNREF, "incremented ref count on %d\n", (*result)->vn_vno);
+
+    return 0;
 }
 
 
@@ -52,8 +78,75 @@ int
 dir_namev(const char *pathname, size_t *namelen, const char **name,
           vnode_t *base, vnode_t **res_vnode)
 {
-        NOT_YET_IMPLEMENTED("VFS: dir_namev");
-        return 0;
+    vnode_t *parent = NULL;
+    vnode_t *curr;
+
+    if (*pathname == '/'){
+        curr = vfs_root_vn;
+        vref(curr);
+        dbg(DBG_VNREF, "incremented ref count on %d\n", curr->vn_vno);
+
+        while (*pathname == '/'){    
+            pathname++;
+        }
+
+    } else if (base == NULL){
+        curr = curproc->p_cwd;
+        dbg(DBG_VNREF, "incremented ref count on %d\n", curr->vn_vno);
+    }
+
+    int should_continue = 1;
+    int dir_name_start = 0;
+    int next_name = 0;
+
+    int cur_name_len;
+
+    while (pathname[next_name] != '\0'){
+        if (parent != NULL){
+            vput(parent);
+            dbg(DBG_VNREF, "decremented ref count on %d\n", parent->vn_vno);
+        }
+
+        parent = curr;
+
+        dir_name_start = next_name;
+
+        /* first, find the end of the current dir name */
+        while (pathname[next_name] != '/' && pathname[next_name] != '\0'){
+            next_name++;
+        }
+
+        /* save the length of the current dir name in case we need it
+         * outside the loop (if the current dir is actually the base) */
+        cur_name_len = next_name - dir_name_start;
+
+        /* then, look up the node */
+        int lookup_result = lookup(parent, (pathname + dir_name_start),
+                next_name - dir_name_start, &curr);
+
+        /* TODO LOTS of error checking */
+        
+        /* read away any trailing slashes */
+        while (pathname[next_name] == '/'){
+            next_name++;
+        }
+    }
+
+    *namelen = cur_name_len;
+    *name = (pathname + dir_name_start);
+
+    if (parent != NULL){
+        *res_vnode = parent;
+    } else {
+        *res_vnode = parent;
+        vref(*res_vnode);
+        dbg(DBG_VNREF, "incremented ref count on %d\n", parent->vn_vno);
+    }
+
+    vput(curr);
+    dbg(DBG_VNREF, "decremented ref count on %d\n", curr->vn_vno);
+
+    return 0;
 }
 
 /* This returns in res_vnode the vnode requested by the other parameters.

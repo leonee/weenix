@@ -145,6 +145,10 @@ proc_create(char *name)
         proc_initproc = p;
     }
 
+    int j;
+    for (j = 0; j < NFILES; j++){
+        p->p_files[j] = NULL;
+    } 
     return p;
 }
 
