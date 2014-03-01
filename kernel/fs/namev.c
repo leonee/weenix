@@ -160,6 +160,17 @@ dir_namev(const char *pathname, size_t *namelen, const char **name,
 int
 open_namev(const char *pathname, int flag, vnode_t **res_vnode, vnode_t *base)
 {
+    size_t namelen;
+    const char *name;
+
+    int namev_result = dir_namev(pathname, &namelen, &name, base, res_vnode);
+
+    if (namev_result == 0){
+        dbg(DBG_VFS, "found the file %s\n", name);
+        return 0;
+    }
+
+
         NOT_YET_IMPLEMENTED("VFS: open_namev");
         return 0;
 }

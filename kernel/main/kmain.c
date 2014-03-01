@@ -193,6 +193,11 @@ idleproc_run(int arg1, void *arg2)
 #ifdef __VFS__
     /* Once you have VFS remember to set the current working directory
      * of the idle and init processes */
+    curproc->p_cwd = vfs_root_vn;
+    vref(vfs_root_vn); 
+
+    initthr->kt_proc->p_cwd = vfs_root_vn;
+    vref(vfs_root_vn);
 
     /* Here you need to make the null, zero, and tty devices using mknod */
     /* You can't do this until you have VFS, check the include/drivers/dev.h
@@ -301,6 +306,7 @@ initproc_run(int arg1, void *arg2)
     run_memdev_tests();
     run_ata_tests();
 */
+/*    
     kshell_add_command("proctest", proctests, "tests proc code");
 
     kshell_add_command("ar", kshell_ata_read, "tests ata_read");
@@ -310,12 +316,12 @@ initproc_run(int arg1, void *arg2)
     kshell_t *ksh = kshell_create(0);
     KASSERT(ksh && "did not create a kernel shell as expected");
 
-    /* Run kshell commands until user exits */
     while ((err = kshell_execute_next(ksh)) > 0);
     KASSERT(err == 0 && "kernel shell exited with an error\n");
     kshell_destroy(ksh);
 
     destroy_kshell_commands();
+   */ 
 /*
    list_t *children = &curproc->p_children; 
    list_link_t *link;

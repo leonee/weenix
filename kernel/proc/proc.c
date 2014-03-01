@@ -145,10 +145,23 @@ proc_create(char *name)
         proc_initproc = p;
     }
 
+#ifdef __VFS__
     int j;
     for (j = 0; j < NFILES; j++){
         p->p_files[j] = NULL;
     } 
+
+/*
+    if (p->p_pid != 0 && p->p_pid != 1){
+        p->p_cwd = p->p_pproc->p_cwd;
+        vref(p->p_cwd);
+        dbg(DBG_FREF | DBG_PROC, "incremented ref count on %d\n", 
+                p->p_cwd->vn_vno);
+    }
+*/
+
+#endif
+
     return p;
 }
 
@@ -219,6 +232,11 @@ proc_cleanup(int status)
     
     /* remove from the list of all processes */
     list_remove(&curproc->p_list_link);
+
+#ifdef __VFS__
+    vput(curproc->p_cwd);
+    curproc->p_cwd = NULL;
+#endif
 
     sched_wakeup_on(&curproc->p_pproc->p_wait);
 }

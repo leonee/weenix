@@ -4,6 +4,10 @@ in vref()
 in lookup()
     -dafuq does lookup return?
 
+in do_open()
+    - how do we create a vnode?
+
 in open_namev()
     - what do we do about errors?
     - should we be locking?
+

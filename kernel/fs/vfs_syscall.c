@@ -41,6 +41,7 @@
 int
 do_read(int fd, void *buf, size_t nbytes)
 {
+    panic("nyi\n");
         NOT_YET_IMPLEMENTED("VFS: do_read");
         return -1;
 }
@@ -56,6 +57,7 @@ do_read(int fd, void *buf, size_t nbytes)
 int
 do_write(int fd, const void *buf, size_t nbytes)
 {
+    panic("nyi\n");
         NOT_YET_IMPLEMENTED("VFS: do_write");
         return -1;
 }
@@ -70,6 +72,7 @@ do_write(int fd, const void *buf, size_t nbytes)
 int
 do_close(int fd)
 {
+    panic("nyi\n");
         NOT_YET_IMPLEMENTED("VFS: do_close");
         return -1;
 }
@@ -93,6 +96,7 @@ do_close(int fd)
 int
 do_dup(int fd)
 {
+    panic("nyi\n");
         NOT_YET_IMPLEMENTED("VFS: do_dup");
         return -1;
 }
@@ -109,6 +113,7 @@ do_dup(int fd)
 int
 do_dup2(int ofd, int nfd)
 {
+    panic("nyi\n");
         NOT_YET_IMPLEMENTED("VFS: do_dup2");
         return -1;
 }
@@ -141,6 +146,7 @@ do_dup2(int ofd, int nfd)
 int
 do_mknod(const char *path, int mode, unsigned devid)
 {
+    panic("nyi\n");
         NOT_YET_IMPLEMENTED("VFS: do_mknod");
         return -1;
 }
@@ -162,6 +168,7 @@ do_mknod(const char *path, int mode, unsigned devid)
 int
 do_mkdir(const char *path)
 {
+    panic("nyi\n");
         NOT_YET_IMPLEMENTED("VFS: do_mkdir");
         return -1;
 }
@@ -187,6 +194,7 @@ do_mkdir(const char *path)
 int
 do_rmdir(const char *path)
 {
+    panic("nyi\n");
         NOT_YET_IMPLEMENTED("VFS: do_rmdir");
         return -1;
 }
@@ -207,6 +215,7 @@ do_rmdir(const char *path)
 int
 do_unlink(const char *path)
 {
+    panic("nyi\n");
         NOT_YET_IMPLEMENTED("VFS: do_unlink");
         return -1;
 }
@@ -233,6 +242,7 @@ do_unlink(const char *path)
 int
 do_link(const char *from, const char *to)
 {
+    panic("nyi\n");
         NOT_YET_IMPLEMENTED("VFS: do_link");
         return -1;
 }
@@ -248,6 +258,7 @@ do_link(const char *from, const char *to)
 int
 do_rename(const char *oldname, const char *newname)
 {
+    panic("nyi\n");
         NOT_YET_IMPLEMENTED("VFS: do_rename");
         return -1;
 }
@@ -268,6 +279,7 @@ do_rename(const char *oldname, const char *newname)
 int
 do_chdir(const char *path)
 {
+    panic("nyi\n");
         NOT_YET_IMPLEMENTED("VFS: do_chdir");
         return -1;
 }
@@ -290,6 +302,7 @@ do_chdir(const char *path)
 int
 do_getdent(int fd, struct dirent *dirp)
 {
+    panic("nyi\n");
         NOT_YET_IMPLEMENTED("VFS: do_getdent");
         return -1;
 }
@@ -307,6 +320,7 @@ do_getdent(int fd, struct dirent *dirp)
 int
 do_lseek(int fd, int offset, int whence)
 {
+    panic("nyi\n");
         NOT_YET_IMPLEMENTED("VFS: do_lseek");
         return -1;
 }
@@ -325,6 +339,7 @@ do_lseek(int fd, int offset, int whence)
 int
 do_stat(const char *path, struct stat *buf)
 {
+    panic("nyi\n");
         NOT_YET_IMPLEMENTED("VFS: do_stat");
         return -1;
 }

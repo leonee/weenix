@@ -119,10 +119,17 @@ do_open(const char *filename, int oflags)
             || f->f_mode == (FMODE_WRITE | FMODE_APPEND)
             || f->f_mode == (FMODE_READ | FMODE_WRITE | FMODE_APPEND));
 
-    /* step 5: use open_namev() to get the vnode for the file_t */
+    int open_result =open_namev(filename, oflags, &f->f_vnode, NULL);
 
-        NOT_YET_IMPLEMENTED("VFS: do_open");
+    /* TODO lots of error checking */
 
-        panic("not yet implemented\n");
-        return -1;
+    KASSERT(open_result == 0 && "open_namev failed\n");
+
+    /* no need to call vref, since open_namev() took care of that, and the current
+       reference to it will soon go away. So, we have an extra reference that we
+       can use */
+    f->f_pos = 0;
+    f->f_refcount = f->f_vnode->vn_refcount;
+
+    return fd;
 }
