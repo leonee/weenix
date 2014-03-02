@@ -168,9 +168,40 @@ do_mknod(const char *path, int mode, unsigned devid)
 int
 do_mkdir(const char *path)
 {
-    panic("nyi\n");
-        NOT_YET_IMPLEMENTED("VFS: do_mkdir");
-        return -1;
+    size_t namelen;
+    const char *name;
+    vnode_t *dir;
+
+    int dir_result = dir_namev(path, &namelen, &name, NULL, &dir);
+
+    switch (dir_result){
+        case -ENOENT:
+            return -ENOENT;
+        case -ENOTDIR:
+            return -ENOTDIR;
+        case -ENAMETOOLONG:
+            return -ENAMETOOLONG;
+        default:
+            /* do nothing */;
+    }
+
+    vnode_t *base_node;
+    int lookup_result = lookup(dir, name, namelen, &base_node);
+
+    int ret_code;
+
+    if (lookup_result == -ENOTDIR){
+        ret_code = -ENOTDIR;
+    } else if (lookup_result == 0){
+        /* the file already exists */
+        vput(base_node);
+        ret_code = -EEXIST;
+    } else {
+        ret_code = dir->vn_ops->mkdir(dir, name, namelen);
+    }
+
+    vput(dir);
+    return ret_code;
 }
 
 /* Use dir_namev() to find the vnode of the directory containing the dir to be

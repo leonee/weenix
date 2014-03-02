@@ -34,7 +34,6 @@ lookup(vnode_t *dir, const char *name, size_t len, vnode_t **result)
     if (len == 1 && name[0] == '.'){
         *result = dir;
         vref(*result);
-        dbg(DBG_VNREF, "incremented ref count on %d\n", (*result)->vn_vno);
         return 0;
     }
     
@@ -46,13 +45,11 @@ lookup(vnode_t *dir, const char *name, size_t len, vnode_t **result)
     
     dbg(DBG_VFS, "result of lookup: %d\n", lookup_result);
 
-    KASSERT(lookup_result == 0);
-    KASSERT(result != NULL);
+    if (lookup_result == 0){
+        vref(*result);
+    }
 
-    vref(*result);
-    dbg(DBG_VNREF, "incremented ref count on %d\n", (*result)->vn_vno);
-
-    return 0;
+    return lookup_result;
 }
 
 
@@ -84,7 +81,6 @@ dir_namev(const char *pathname, size_t *namelen, const char **name,
     if (*pathname == '/'){
         curr = vfs_root_vn;
         vref(curr);
-        dbg(DBG_VNREF, "incremented ref count on %d\n", curr->vn_vno);
 
         while (*pathname == '/'){    
             pathname++;
@@ -92,7 +88,6 @@ dir_namev(const char *pathname, size_t *namelen, const char **name,
 
     } else if (base == NULL){
         curr = curproc->p_cwd;
-        dbg(DBG_VNREF, "incremented ref count on %d\n", curr->vn_vno);
     }
 
     int should_continue = 1;
@@ -104,7 +99,6 @@ dir_namev(const char *pathname, size_t *namelen, const char **name,
     while (pathname[next_name] != '\0'){
         if (parent != NULL){
             vput(parent);
-            dbg(DBG_VNREF, "decremented ref count on %d\n", parent->vn_vno);
         }
 
         parent = curr;
@@ -140,11 +134,9 @@ dir_namev(const char *pathname, size_t *namelen, const char **name,
     } else {
         *res_vnode = parent;
         vref(*res_vnode);
-        dbg(DBG_VNREF, "incremented ref count on %d\n", parent->vn_vno);
     }
 
     vput(curr);
-    dbg(DBG_VNREF, "decremented ref count on %d\n", curr->vn_vno);
 
     return 0;
 }

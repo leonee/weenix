@@ -152,7 +152,7 @@ proc_create(char *name)
     } 
 
 /*
-    if (p->p_pid != 0 && p->p_pid != 1){
+    if (p->p_pid > 2){
         p->p_cwd = p->p_pproc->p_cwd;
         vref(p->p_cwd);
         dbg(DBG_FREF | DBG_PROC, "incremented ref count on %d\n", 

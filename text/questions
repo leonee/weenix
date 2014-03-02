@@ -11,3 +11,6 @@ in open_namev()
     - what do we do about errors?
     - should we be locking?
 
+
+In general:
+    - Where do we set a proc's cwd?

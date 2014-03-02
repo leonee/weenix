@@ -413,7 +413,6 @@ ramfs_lookup(vnode_t *dir, const char *name, size_t namelen, vnode_t **result)
         ramfs_dirent_t *entry = (ramfs_dirent_t *)inode->rf_mem;
 
         for (i = 0; i < RAMFS_MAX_DIRENT; i++, entry++) {
-            dbg(DBG_VFS, "%s\n", entry->rd_name);
                 if (name_match(entry->rd_name, name, namelen)) {
                         *result = vget(dir->vn_fs, entry->rd_ino);
                         return 0;

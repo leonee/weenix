@@ -202,6 +202,12 @@ idleproc_run(int arg1, void *arg2)
     /* Here you need to make the null, zero, and tty devices using mknod */
     /* You can't do this until you have VFS, check the include/drivers/dev.h
      * file for macros with the device ID's you will need to pass to mknod */
+    int mkdir_res = do_mkdir("/dev");
+    KASSERT(mkdir_res == 0 && "unable to create dev directory\n");
+
+    if (do_mknod("/dev/tty0", S_IFCHR, MKDEVID(1, 0)) < 0){
+        panic("unable to create tty0\n");
+    }
 #endif
 
     /* Finally, enable interrupts (we want to make sure interrupts
@@ -321,7 +327,7 @@ initproc_run(int arg1, void *arg2)
     kshell_destroy(ksh);
 
     destroy_kshell_commands();
-   */ 
+*/   
 /*
    list_t *children = &curproc->p_children; 
    list_link_t *link;
