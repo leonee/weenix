@@ -99,16 +99,16 @@ do_open(const char *filename, int oflags)
     /* step 4: Set the file_t->f-mode */
     f->f_mode = 0;
 
-    if (oflags & O_RDONLY){
-        f->f_mode = FMODE_READ;
-    } else if (oflags & O_WRONLY){
-        f->f_mode = FMODE_WRITE;
-    } else if (oflags & O_RDWR){
-        f->f_mode = FMODE_READ | FMODE_WRITE;
+    if (oflags & O_APPEND){
+        f->f_mode = FMODE_APPEND;
     }
 
-    if (oflags & O_APPEND){
-        f->f_mode |= FMODE_APPEND;
+    if (oflags == O_APPEND || oflags == O_RDONLY){
+        f->f_mode |= FMODE_READ;
+    } else if (oflags & O_WRONLY){
+        f->f_mode |= FMODE_WRITE;
+    } else if (oflags & O_RDWR){
+        f->f_mode |= FMODE_READ | FMODE_WRITE;
     }
 
     /* make sure we have a valid mode */

@@ -17,5 +17,8 @@ in open_namev()
 in do_write()
     - if the file is extended, do we need to manually modify the len field?
 
+in do_getdent()
+    - what does this return?
+
 In general:
     - Where do we set a proc's cwd?

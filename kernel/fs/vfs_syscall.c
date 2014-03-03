@@ -446,9 +446,35 @@ do_chdir(const char *path)
 int
 do_getdent(int fd, struct dirent *dirp)
 {
-    panic("nyi\n");
-        NOT_YET_IMPLEMENTED("VFS: do_getdent");
-        return -1;
+    if (fd == -1){
+        return -EBADF;
+    }
+
+    file_t *f = fget(fd);
+
+    if (f == NULL){
+        return -EBADF;
+    }
+
+    if (f->f_vnode->vn_ops->readdir == NULL){
+        fput(f);
+        return -ENOTDIR;
+    }
+
+    int readdir_res = f->f_vnode->vn_ops->readdir(f->f_vnode, f->f_pos, dirp);
+
+    /* if the call to readdir() failed */
+    if (readdir_res < 1){
+        fput(f);
+        return readdir_res;
+    }
+
+    int seek_result = do_lseek(fd, readdir_res, SEEK_CUR);
+
+    fput(f);
+    
+    dbg(DBG_VFS, "casting from unsigned to signed int...\n");
+    return (seek_result > -1) ? (signed) sizeof(dirent_t) : seek_result;
 }
 
 /*
