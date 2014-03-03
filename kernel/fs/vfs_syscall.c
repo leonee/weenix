@@ -158,11 +158,9 @@ do_mknod(const char *path, int mode, unsigned devid)
 
     switch (dir_result){
         case -ENOENT:
-            return -ENOENT;
         case -ENOTDIR:
-            return -ENOTDIR;
         case -ENAMETOOLONG:
-            return -ENAMETOOLONG;
+            return dir_result;
         default:
             /* do nothing */;
     }

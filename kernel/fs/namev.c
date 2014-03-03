@@ -45,10 +45,6 @@ lookup(vnode_t *dir, const char *name, size_t len, vnode_t **result)
     
     dbg(DBG_VFS, "result of lookup: %d\n", lookup_result);
 
-    if (lookup_result == 0){
-        vref(*result);
-    }
-
     return lookup_result;
 }
 
@@ -129,17 +125,12 @@ dir_namev(const char *pathname, size_t *namelen, const char **name,
     *namelen = cur_name_len;
     *name = (pathname + dir_name_start);
 
-    if (parent != NULL){
-        *res_vnode = parent;
-    } else {
-        *res_vnode = parent;
-        vref(*res_vnode);
-    }
+    *res_vnode = parent;
 
     if (lookup_result == 0){
         vput(curr);
     }
-
+    
     return 0;
 }
 
