@@ -204,10 +204,10 @@ idleproc_run(int arg1, void *arg2)
      * file for macros with the device ID's you will need to pass to mknod */
     int mkdir_res = do_mkdir("/dev");
     KASSERT(mkdir_res == 0 && "unable to create dev directory\n");
-
+/*
     if (do_mknod("/dev/tty0", S_IFCHR, MKDEVID(1, 0)) < 0){
         panic("unable to create tty0\n");
-    }
+    }*/
 #endif
 
     /* Finally, enable interrupts (we want to make sure interrupts

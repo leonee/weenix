@@ -93,7 +93,7 @@ dir_namev(const char *pathname, size_t *namelen, const char **name,
     int should_continue = 1;
     int dir_name_start = 0;
     int next_name = 0;
-
+    int lookup_result = -1;
     int cur_name_len;
 
     while (pathname[next_name] != '\0'){
@@ -115,7 +115,7 @@ dir_namev(const char *pathname, size_t *namelen, const char **name,
         cur_name_len = next_name - dir_name_start;
 
         /* then, look up the node */
-        int lookup_result = lookup(parent, (pathname + dir_name_start),
+        lookup_result = lookup(parent, (pathname + dir_name_start),
                 next_name - dir_name_start, &curr);
 
         /* TODO LOTS of error checking */
@@ -136,7 +136,9 @@ dir_namev(const char *pathname, size_t *namelen, const char **name,
         vref(*res_vnode);
     }
 
-    vput(curr);
+    if (lookup_result == 0){
+        vput(curr);
+    }
 
     return 0;
 }
