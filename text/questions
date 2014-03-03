@@ -11,6 +11,8 @@ in open_namev()
     - what do we do about errors?
     - should we be locking?
 
+in do_write()
+    - if the file is extended, do we need to manually modify the len field?
 
 In general:
     - Where do we set a proc's cwd?

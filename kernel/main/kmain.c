@@ -312,7 +312,7 @@ initproc_run(int arg1, void *arg2)
     run_memdev_tests();
     run_ata_tests();
 */
-/*    
+    
     kshell_add_command("proctest", proctests, "tests proc code");
 
     kshell_add_command("ar", kshell_ata_read, "tests ata_read");
@@ -326,8 +326,7 @@ initproc_run(int arg1, void *arg2)
     KASSERT(err == 0 && "kernel shell exited with an error\n");
     kshell_destroy(ksh);
 
-    destroy_kshell_commands();
-  */ 
+    destroy_kshell_commands(); 
 /*
    list_t *children = &curproc->p_children; 
    list_link_t *link;

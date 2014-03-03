@@ -124,6 +124,7 @@ dir_namev(const char *pathname, size_t *namelen, const char **name,
 
     *namelen = cur_name_len;
     *name = (pathname + dir_name_start);
+    name[*namelen] = '\0';
 
     *res_vnode = parent;
 
@@ -145,19 +146,28 @@ dir_namev(const char *pathname, size_t *namelen, const char **name,
 int
 open_namev(const char *pathname, int flag, vnode_t **res_vnode, vnode_t *base)
 {
+    /* TODO locking */
     size_t namelen;
     const char *name;
 
-    int namev_result = dir_namev(pathname, &namelen, &name, base, res_vnode);
+    vnode_t *dir;
 
-    if (namev_result == 0){
-        dbg(DBG_VFS, "found the file %s\n", name);
-        return 0;
+    int namev_result = dir_namev(pathname, &namelen, &name, base, &dir);
+
+    if (namev_result < 0){
+        dbg(DBG_VFS, "couldn't fine the file %s\n", name);
+        return namev_result;
     }
+   
+    int lookup_res = lookup(dir, name, namelen, res_vnode);
 
+    if (lookup_res < 0 && (flag & O_CREAT)){
+        dir->vn_ops->create(dir, name, namelen, res_vnode);
+    }
+    
+    vput(dir);
 
-        NOT_YET_IMPLEMENTED("VFS: open_namev");
-        return 0;
+    return lookup_res;
 }
 
 #ifdef __GETCWD__

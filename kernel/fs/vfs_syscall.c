@@ -41,9 +41,29 @@
 int
 do_read(int fd, void *buf, size_t nbytes)
 {
-    panic("nyi\n");
-        NOT_YET_IMPLEMENTED("VFS: do_read");
-        return -1;
+    file_t *f = fget(fd);
+
+    if (f == NULL){
+        return -EBADF;
+    } else if (!(f->f_mode & FMODE_READ)){
+        fput(f);
+        return -EBADF;
+    }
+
+    if (f->f_vnode->vn_ops->read == NULL){
+        return -EISDIR;
+    }
+
+    int bytes_read = f->f_vnode->vn_ops->read(f->f_vnode, f->f_pos, buf, nbytes);
+
+    if (bytes_read == 0 && nbytes != 0){
+        do_lseek(fd, 0, SEEK_END);
+    } else if (bytes_read > 0){
+        do_lseek(fd, bytes_read, SEEK_CUR);
+    }
+
+    fput(f);
+    return bytes_read;
 }
 
 /* Very similar to do_read.  Check f_mode to be sure the file is writable.  If
@@ -57,9 +77,31 @@ do_read(int fd, void *buf, size_t nbytes)
 int
 do_write(int fd, const void *buf, size_t nbytes)
 {
-    panic("nyi\n");
-        NOT_YET_IMPLEMENTED("VFS: do_write");
-        return -1;
+    file_t *f = fget(fd);
+
+    if (f == NULL){
+        return -EBADF;
+    } else if (!(f->f_mode & FMODE_WRITE)){
+        fput(f);
+        return -EBADF;
+    }
+
+    if (f->f_vnode->vn_ops->read == NULL){
+        return -EISDIR;
+    }
+
+    if (f->f_mode & FMODE_APPEND){
+        do_lseek(fd, 0, SEEK_END);
+    }
+
+    int bytes_written = f->f_vnode->vn_ops->write(f->f_vnode, f->f_pos, buf, nbytes);
+
+    if (bytes_written > 0){
+        do_lseek(fd, bytes_written, SEEK_CUR);
+    }
+
+    fput(f);
+    return bytes_written;
 }
 
 /*
