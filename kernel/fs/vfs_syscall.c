@@ -41,6 +41,10 @@
 int
 do_read(int fd, void *buf, size_t nbytes)
 {
+    if (fd == -1){
+        return -EBADF;
+    }
+
     file_t *f = fget(fd);
 
     if (f == NULL){
@@ -51,19 +55,31 @@ do_read(int fd, void *buf, size_t nbytes)
     }
 
     if (f->f_vnode->vn_ops->read == NULL){
+        fput(f);
         return -EISDIR;
     }
 
     int bytes_read = f->f_vnode->vn_ops->read(f->f_vnode, f->f_pos, buf, nbytes);
 
+    int ret_val = bytes_read;
+
     if (bytes_read == 0 && nbytes != 0){
-        do_lseek(fd, 0, SEEK_END);
+        int seek_val = do_lseek(fd, 0, SEEK_END);
+
+        if (seek_val < 0){
+            ret_val = seek_val;
+        }
+
     } else if (bytes_read > 0){
-        do_lseek(fd, bytes_read, SEEK_CUR);
+        int seek_val = do_lseek(fd, bytes_read, SEEK_CUR);
+
+        if (seek_val < 0){
+            ret_val = seek_val;
+        }
     }
 
     fput(f);
-    return bytes_read;
+    return ret_val;
 }
 
 /* Very similar to do_read.  Check f_mode to be sure the file is writable.  If
@@ -77,6 +93,10 @@ do_read(int fd, void *buf, size_t nbytes)
 int
 do_write(int fd, const void *buf, size_t nbytes)
 {
+    if (fd == -1){
+        return -EBADF;
+    }
+
     file_t *f = fget(fd);
 
     if (f == NULL){
@@ -87,6 +107,7 @@ do_write(int fd, const void *buf, size_t nbytes)
     }
 
     if (f->f_vnode->vn_ops->read == NULL){
+        fput(f);
         return -EISDIR;
     }
 
@@ -96,12 +117,18 @@ do_write(int fd, const void *buf, size_t nbytes)
 
     int bytes_written = f->f_vnode->vn_ops->write(f->f_vnode, f->f_pos, buf, nbytes);
 
+    int ret_val = bytes_written;
+
     if (bytes_written > 0){
-        do_lseek(fd, bytes_written, SEEK_CUR);
+        int seek_val = do_lseek(fd, bytes_written, SEEK_CUR);
+
+        if (seek_val < 0){
+            ret_val = seek_val;
+        }
     }
 
     fput(f);
-    return bytes_written;
+    return ret_val;
 }
 
 /*
@@ -114,9 +141,21 @@ do_write(int fd, const void *buf, size_t nbytes)
 int
 do_close(int fd)
 {
-    panic("nyi\n");
-        NOT_YET_IMPLEMENTED("VFS: do_close");
-        return -1;
+    if (fd == -1){
+        return -EBADF;
+    }
+
+    file_t *f = fget(fd);
+
+    if (f == NULL){
+        return -EBADF;
+    }
+
+    curproc->p_files[fd] = 0;
+
+    fput(f);
+
+    return 0;
 }
 
 /* To dup a file:
@@ -424,9 +463,30 @@ do_getdent(int fd, struct dirent *dirp)
 int
 do_lseek(int fd, int offset, int whence)
 {
-    panic("nyi\n");
-        NOT_YET_IMPLEMENTED("VFS: do_lseek");
-        return -1;
+    if (fd == -1){
+        return -EBADF;
+    }
+
+    file_t *f = fget(fd);
+
+    if (f == NULL){
+        return -EBADF;
+    }   
+
+    if (whence == SEEK_SET && offset > 0){
+        f->f_pos = offset;
+    } else if (whence == SEEK_CUR && f->f_pos + offset >= 0){
+        f->f_pos += offset;
+    } else if (whence == SEEK_END && f->f_vnode->vn_len + offset >= 0){
+        f->f_pos = f->f_vnode->vn_len + offset;
+    } else {
+        fput(f);
+        return -EINVAL;
+    }
+
+    int ret_val = f->f_pos;
+    fput(f);
+    return ret_val;
 }
 
 /*
