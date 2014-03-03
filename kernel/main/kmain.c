@@ -327,7 +327,7 @@ initproc_run(int arg1, void *arg2)
     kshell_destroy(ksh);
 
     destroy_kshell_commands();
-*/   
+  */ 
 /*
    list_t *children = &curproc->p_children; 
    list_link_t *link;
