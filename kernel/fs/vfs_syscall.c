@@ -153,6 +153,7 @@ do_close(int fd)
 
     curproc->p_files[fd] = 0;
 
+    vput(f->f_vnode);
     fput(f);
 
     return 0;

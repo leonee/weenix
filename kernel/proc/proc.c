@@ -234,6 +234,12 @@ proc_cleanup(int status)
     list_remove(&curproc->p_list_link);
 
 #ifdef __VFS__
+    int i;
+    for (i = 0; i < NFILES; i++){
+        if (curproc->p_files[i] != NULL){
+            fput(curproc->p_files[i]);
+        }
+    }
     vput(curproc->p_cwd);
     curproc->p_cwd = NULL;
 #endif

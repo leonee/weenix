@@ -205,9 +205,18 @@ idleproc_run(int arg1, void *arg2)
     int mkdir_res = do_mkdir("/dev");
     KASSERT(mkdir_res == 0 && "unable to create dev directory\n");
 
-    if (do_mknod("/dev/tty0", S_IFCHR, MKDEVID(1, 0)) < 0){
+    if (do_mknod("/dev/tty0", S_IFCHR, MKDEVID(2, 0)) < 0){
         panic("unable to create tty0\n");
     }
+
+    if (do_mknod("/dev/null", S_IFBLK, MEM_NULL_DEVID) < 0){
+        panic("unable to create /dev/null");
+    } 
+
+    if (do_mknod("/dev/zero", S_IFBLK, MEM_ZERO_DEVID) < 0){
+        panic("unable to create /dev/zero");
+    }
+
 #endif
 
     /* Finally, enable interrupts (we want to make sure interrupts

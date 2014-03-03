@@ -7,6 +7,9 @@ in lookup()
 in do_open()
     - how do we create a vnode?
 
+in do_close()
+    - am I supposed to vput() the vnode for the file?
+
 in open_namev()
     - what do we do about errors?
     - should we be locking?

@@ -86,7 +86,6 @@ do_open(const char *filename, int oflags)
 
     /* error case 3 */
     if (f == NULL){
-        fput(f);
         return -ENOMEM;
     }
 
@@ -119,7 +118,7 @@ do_open(const char *filename, int oflags)
             || f->f_mode == (FMODE_WRITE | FMODE_APPEND)
             || f->f_mode == (FMODE_READ | FMODE_WRITE | FMODE_APPEND));
 
-    int open_result =open_namev(filename, oflags, &f->f_vnode, NULL);
+    int open_result = open_namev(filename, oflags, &f->f_vnode, NULL);
     dbg(DBG_VFS, "found the vnode with id %d\n", f->f_vnode->vn_vno);
 
     /* TODO lots of error checking */
