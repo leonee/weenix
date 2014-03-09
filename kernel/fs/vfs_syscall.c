@@ -155,6 +155,8 @@ do_close(int fd)
         return -EBADF;
     }
 
+    int orig_refcount = f->f_vnode->vn_mmobj.mmo_refcount;
+
     curproc->p_files[fd] = 0;
 
     fput(f);
@@ -551,7 +553,7 @@ do_stat(const char *path, struct stat *buf)
 
     int stat_result = vn->vn_ops->stat(vn, buf);
 
-/*    vput(vn);*/
+    vput(vn);
     return result;
 }
 

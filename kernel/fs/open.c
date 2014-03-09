@@ -131,7 +131,7 @@ do_open(const char *filename, int oflags)
     /* step 6: fill in the fields of the file_t */
     /* no need to call vref, since open_namev() took care of that*/
     f->f_pos = 0;
-    f->f_refcount = f->f_vnode->vn_refcount;
+    f->f_refcount = 1;
 
     /* step 7: return new fd */
     return fd;
