@@ -199,9 +199,9 @@ idleproc_run(int arg1, void *arg2)
     initthr->kt_proc->p_cwd = vfs_root_vn;
     vref(vfs_root_vn);
 
-    /* Here you need to make the null, zero, and tty devices using mknod */
-    /* You can't do this until you have VFS, check the include/drivers/dev.h
-     * file for macros with the device ID's you will need to pass to mknod */
+    /* Here you need to make the null, zero, and tty devices using mknod 
+     You can't do this until you have VFS, check the include/drivers/dev.h
+     file for macros with the device ID's you will need to pass to mknod */
     int mkdir_res = do_mkdir("/dev");
     KASSERT(mkdir_res == 0 && "unable to create dev directory\n");
 

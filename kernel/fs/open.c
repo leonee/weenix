@@ -73,6 +73,7 @@ get_empty_fd(proc_t *p)
 int
 do_open(const char *filename, int oflags)
 {
+    dbg(DBG_VFS, "calling do_open on %s\n", filename);
     /* step 1: get next empty file descriptor */
     int fd = get_empty_fd(curproc);
 
@@ -118,18 +119,20 @@ do_open(const char *filename, int oflags)
             || f->f_mode == (FMODE_WRITE | FMODE_APPEND)
             || f->f_mode == (FMODE_READ | FMODE_WRITE | FMODE_APPEND));
 
+    /* step 5: use open_namev to get the vnode for the file_t */
     int open_result = open_namev(filename, oflags, &f->f_vnode, NULL);
-    dbg(DBG_VFS, "found the vnode with id %d\n", f->f_vnode->vn_vno);
+    dbg(DBG_VFS, "found the vnode with id %d. Current refcount is %d\n",
+            f->f_vnode->vn_vno, f->f_vnode->vn_mmobj.mmo_refcount);
 
     /* TODO lots of error checking */
 
     KASSERT(open_result == 0 && "open_namev failed\n");
 
-    /* no need to call vref, since open_namev() took care of that, and the current
-       reference to it will soon go away. So, we have an extra reference that we
-       can use */
+    /* step 6: fill in the fields of the file_t */
+    /* no need to call vref, since open_namev() took care of that*/
     f->f_pos = 0;
     f->f_refcount = f->f_vnode->vn_refcount;
 
+    /* step 7: return new fd */
     return fd;
 }

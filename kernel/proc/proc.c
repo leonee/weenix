@@ -151,14 +151,14 @@ proc_create(char *name)
         p->p_files[j] = NULL;
     } 
 
-/*
+
     if (p->p_pid > 2){
         p->p_cwd = p->p_pproc->p_cwd;
         vref(p->p_cwd);
         dbg(DBG_FREF | DBG_PROC, "incremented ref count on %d\n", 
                 p->p_cwd->vn_vno);
     }
-*/
+
 
 #endif
 

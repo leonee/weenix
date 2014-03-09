@@ -25,6 +25,7 @@
 int
 lookup(vnode_t *dir, const char *name, size_t len, vnode_t **result)
 {
+    dbg(DBG_VFS, "calling lookup on %s\n", name);
     if (dir->vn_ops->lookup == NULL){
         return -ENOTDIR;
     }
@@ -71,12 +72,12 @@ int
 dir_namev(const char *pathname, size_t *namelen, const char **name,
           vnode_t *base, vnode_t **res_vnode)
 {
+    dbg(DBG_VFS, "calling dir_namev on %s\n", pathname);
     vnode_t *parent = NULL;
     vnode_t *curr;
 
     if (*pathname == '/'){
         curr = vfs_root_vn;
-        vref(curr);
 
         while (*pathname == '/'){    
             pathname++;
@@ -84,15 +85,19 @@ dir_namev(const char *pathname, size_t *namelen, const char **name,
 
     } else if (base == NULL){
         curr = curproc->p_cwd;
+    } else {
+        curr = base;
     }
 
+    vref(curr);
+    
     int should_continue = 1;
     int dir_name_start = 0;
     int next_name = 0;
-    int lookup_result = -1;
+    int lookup_result = 1;
     int cur_name_len;
 
-    while (pathname[next_name] != '\0'){
+    while (lookup_result >= 0 && pathname[next_name] != '\0'){
         if (parent != NULL){
             vput(parent);
         }
@@ -114,12 +119,26 @@ dir_namev(const char *pathname, size_t *namelen, const char **name,
         lookup_result = lookup(parent, (pathname + dir_name_start),
                 next_name - dir_name_start, &curr);
 
-        /* TODO LOTS of error checking */
-        
+        /* we've reserved this as a special value, so let's make sure it never
+         * is returned for real */
+        KASSERT(!(lookup_result > 0));
+
         /* read away any trailing slashes */
         while (pathname[next_name] == '/'){
             next_name++;
         }
+    }
+
+    /* see if we exited in error */
+    if (lookup_result < 0 && pathname[next_name] != 0){
+        dbg(DBG_VFS, "lookup failed with error code %d\n", lookup_result);
+        vput(parent);
+
+        return lookup_result;
+    } 
+    
+    if (lookup_result == 0){
+        vput(curr);
     }
 
     *namelen = cur_name_len;
@@ -128,10 +147,6 @@ dir_namev(const char *pathname, size_t *namelen, const char **name,
 
     *res_vnode = parent;
 
-    if (lookup_result == 0){
-        vput(curr);
-    }
-    
     return 0;
 }
 
@@ -146,6 +161,9 @@ dir_namev(const char *pathname, size_t *namelen, const char **name,
 int
 open_namev(const char *pathname, int flag, vnode_t **res_vnode, vnode_t *base)
 {
+    /* TODO figure out how to handle looking up something with no path */
+    dbg(DBG_VFS, "calling open_namev on %s\n", pathname);
+
     /* TODO locking */
     size_t namelen;
     const char *name;

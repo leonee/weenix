@@ -41,6 +41,7 @@
 int
 do_read(int fd, void *buf, size_t nbytes)
 {
+    dbg(DBG_VFS, "calling do_read on fd %d\n", fd);
     if (fd == -1){
         return -EBADF;
     }
@@ -93,6 +94,7 @@ do_read(int fd, void *buf, size_t nbytes)
 int
 do_write(int fd, const void *buf, size_t nbytes)
 {
+    dbg(DBG_VFS, "calling do_write on fd %d\n", fd);
     if (fd == -1){
         return -EBADF;
     }
@@ -141,19 +143,20 @@ do_write(int fd, const void *buf, size_t nbytes)
 int
 do_close(int fd)
 {
+    dbg(DBG_VFS, "calling do_close on fd %d\n", fd);
     if (fd == -1){
         return -EBADF;
     }
 
-    file_t *f = fget(fd);
+    file_t *f = curproc->p_files[fd];
 
     if (f == NULL){
+        dbg(DBG_VFS, "invalid file descriptor %d. Unable to close file", fd);
         return -EBADF;
     }
 
     curproc->p_files[fd] = 0;
 
-    vput(f->f_vnode);
     fput(f);
 
     return 0;
@@ -228,6 +231,7 @@ do_dup2(int ofd, int nfd)
 int
 do_mknod(const char *path, int mode, unsigned devid)
 {
+    dbg(DBG_VFS, "calling do_mknod on %s\n", path);
     if (mode != S_IFCHR && mode != S_IFBLK){
         return -EINVAL;
     }
@@ -246,6 +250,8 @@ do_mknod(const char *path, int mode, unsigned devid)
         default:
             /* do nothing */;
     }
+
+    KASSERT(dir_result == 0);
 
     vnode_t *base_node;
     int lookup_result = lookup(dir, name, namelen, &base_node);
@@ -283,6 +289,7 @@ do_mknod(const char *path, int mode, unsigned devid)
 int
 do_mkdir(const char *path)
 {
+    dbg(DBG_VFS, "calling do_mkdir on %s\n", path);
     size_t namelen;
     const char *name;
     vnode_t *dir;
@@ -446,6 +453,7 @@ do_chdir(const char *path)
 int
 do_getdent(int fd, struct dirent *dirp)
 {
+    dbg(DBG_VFS, "calling do_getdent on fd %d\n", fd);
     if (fd == -1){
         return -EBADF;
     }
@@ -490,6 +498,7 @@ do_getdent(int fd, struct dirent *dirp)
 int
 do_lseek(int fd, int offset, int whence)
 {
+    dbg(DBG_VFS, "calling do_lseek on fd %d\n", fd);
     if (fd == -1){
         return -EBADF;
     }
@@ -530,9 +539,20 @@ do_lseek(int fd, int offset, int whence)
 int
 do_stat(const char *path, struct stat *buf)
 {
-    panic("nyi\n");
-        NOT_YET_IMPLEMENTED("VFS: do_stat");
-        return -1;
+    dbg(DBG_VFS, "calling do_stat on  %s\n", path);
+    vnode_t *vn;
+
+    int result = open_namev(path, 0, &vn, NULL);
+
+    if (result < 0){
+        dbg(DBG_VFS, "do_stat failed because open_namev returned %d\n", result);
+        return result;
+    }
+
+    int stat_result = vn->vn_ops->stat(vn, buf);
+
+/*    vput(vn);*/
+    return result;
 }
 
 #ifdef __MOUNTING__
