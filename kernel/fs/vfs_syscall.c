@@ -42,7 +42,7 @@ int
 do_read(int fd, void *buf, size_t nbytes)
 {
     dbg(DBG_VFS, "calling do_read on fd %d\n", fd);
-    if (fd == -1){
+    if (fd < 0){
         return -EBADF;
     }
 
@@ -95,7 +95,7 @@ int
 do_write(int fd, const void *buf, size_t nbytes)
 {
     dbg(DBG_VFS, "calling do_write on fd %d\n", fd);
-    if (fd == -1){
+    if (fd < 0){
         return -EBADF;
     }
 
@@ -144,7 +144,7 @@ int
 do_close(int fd)
 {
     dbg(DBG_VFS, "calling do_close on fd %d\n", fd);
-    if (fd == -1){
+    if (fd < 0){
         return -EBADF;
     }
 
@@ -456,7 +456,7 @@ int
 do_getdent(int fd, struct dirent *dirp)
 {
     dbg(DBG_VFS, "calling do_getdent on fd %d\n", fd);
-    if (fd == -1){
+    if (fd < 0){
         return -EBADF;
     }
 
@@ -501,7 +501,7 @@ int
 do_lseek(int fd, int offset, int whence)
 {
     dbg(DBG_VFS, "calling do_lseek on fd %d\n", fd);
-    if (fd == -1){
+    if (fd < 0){
         return -EBADF;
     }
 
