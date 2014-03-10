@@ -91,7 +91,6 @@ dir_namev(const char *pathname, size_t *namelen, const char **name,
 
     vref(curr);
     
-    int should_continue = 1;
     int dir_name_start = 0;
     int next_name = 0;
     int lookup_result = 1;
@@ -143,7 +142,6 @@ dir_namev(const char *pathname, size_t *namelen, const char **name,
 
     *namelen = cur_name_len;
     *name = (pathname + dir_name_start);
-    name[*namelen] = '\0';
 
     *res_vnode = parent;
 

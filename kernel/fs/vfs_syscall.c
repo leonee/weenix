@@ -432,9 +432,21 @@ do_rename(const char *oldname, const char *newname)
 int
 do_chdir(const char *path)
 {
-    panic("nyi\n");
-        NOT_YET_IMPLEMENTED("VFS: do_chdir");
-        return -1;
+    dbg(DBG_VFS, "calling do_chdir on %s\n", path);
+
+    vnode_t *new_wd;
+
+    int open_namev_res = open_namev(path, O_RDONLY, &new_wd, NULL);
+
+    if (open_namev_res < 0){
+        dbg(DBG_VFS, "do_chdir failed with error %d\n", open_namev_res);
+        return open_namev_res;
+    }
+    
+    vput(curproc->p_cwd);
+    curproc->p_cwd = new_wd;
+
+    return 0;
 }
 
 /* Call the readdir f_op on the given fd, filling in the given dirent_t*.
@@ -544,7 +556,7 @@ do_stat(const char *path, struct stat *buf)
     dbg(DBG_VFS, "calling do_stat on  %s\n", path);
     vnode_t *vn;
 
-    int result = open_namev(path, 0, &vn, NULL);
+    int result = open_namev(path, O_RDONLY, &vn, NULL);
 
     if (result < 0){
         dbg(DBG_VFS, "do_stat failed because open_namev returned %d\n", result);
