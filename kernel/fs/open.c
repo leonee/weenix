@@ -114,6 +114,7 @@ do_open(const char *filename, int oflags)
         f->f_mode |= FMODE_READ;
     } else {
         dbg(DBG_VFS, "oflags not valid\n");
+        fput(f);
         return -EINVAL;
     }
 
@@ -126,13 +127,15 @@ do_open(const char *filename, int oflags)
 
     /* step 5: use open_namev to get the vnode for the file_t */
     int open_result = open_namev(filename, oflags, &f->f_vnode, NULL);
-    dbg(DBG_VFS, "found the vnode with id %d. Current refcount is %d\n",
-            f->f_vnode->vn_vno, f->f_vnode->vn_mmobj.mmo_refcount);
 
     if (open_result < 0){
         curproc->p_files[fd] = NULL;
         fput(f);
+        return open_result;
     }
+
+    dbg(DBG_VFS, "found the vnode with id %d. Current refcount is %d\n",
+            f->f_vnode->vn_vno, f->f_vnode->vn_mmobj.mmo_refcount);
 
     /* step 6: fill in the fields of the file_t */
     /* no need to call vref, since open_namev() took care of that*/

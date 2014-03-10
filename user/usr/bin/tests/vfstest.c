@@ -289,7 +289,7 @@ vfstest_mkdir(void)
 
         /* unlink and rmdir the inappropriate types */
         syscall_fail(rmdir("file"), ENOTDIR);
-        syscall_fail(unlink("dir"), EPERM);
+        syscall_fail(unlink("dir"), EISDIR);
 
         /* remove non-empty directory */
         create_file("dir/file");

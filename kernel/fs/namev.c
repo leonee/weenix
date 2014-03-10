@@ -69,6 +69,10 @@ int
 dir_namev(const char *pathname, size_t *namelen, const char **name,
           vnode_t *base, vnode_t **res_vnode)
 {
+    if (*pathname == '\0'){
+        return -EINVAL;
+    }
+
     vnode_t *parent = NULL;
     vnode_t *curr;
 
@@ -86,7 +90,14 @@ dir_namev(const char *pathname, size_t *namelen, const char **name,
     }
 
     vref(curr);
-    
+
+    if (*pathname == '\0'){
+        *namelen = 0;
+        *name = pathname;
+        *res_vnode = curr;
+        return 0;
+    }
+
     int dir_name_start = 0;
     int next_name = 0;
     int lookup_result = 1;
@@ -120,6 +131,11 @@ dir_namev(const char *pathname, size_t *namelen, const char **name,
         lookup_result = lookup(parent, (pathname + dir_name_start),
                 next_name - dir_name_start, &curr);
 
+        if (lookup_result == -ENOTDIR){
+            errcode = -ENOTDIR;
+            break;
+        }
+
         /* we've reserved this as a special value, so let's make sure it never
          * is returned for real */
         KASSERT(!(lookup_result > 0));
@@ -130,7 +146,7 @@ dir_namev(const char *pathname, size_t *namelen, const char **name,
         }
     }
 
-    /* see if we exited in error */
+    /* see if we exited in error -- these are only true if we've entered the loop */
     if (lookup_result < 0 && pathname[next_name] != 0){
         dbg(DBG_VFS, "lookup failed with error code %d\n", lookup_result);
         vput(parent);
@@ -175,7 +191,7 @@ open_namev(const char *pathname, int flag, vnode_t **res_vnode, vnode_t *base)
     int namev_result = dir_namev(pathname, &namelen, &name, base, &dir);
 
     if (namev_result < 0){
-        dbg(DBG_VFS, "couldn't find the file %s\n", name);
+        dbg(DBG_VFS, "couldn't find the file\n");
         return namev_result;
     }
   
@@ -191,10 +207,14 @@ open_namev(const char *pathname, int flag, vnode_t **res_vnode, vnode_t *base)
        }
     } else if (flag & O_CREAT){
         ret_val = -EEXIST;
+        vput(*res_vnode);
+        *res_vnode = NULL;
     } else if ((*res_vnode)->vn_ops->mkdir != NULL &&
             ((flag & O_WRONLY) || (flag & O_RDWR))){
         
         ret_val = -EISDIR;
+        vput(*res_vnode);
+        *res_vnode = NULL;
     }/* else if ((*res_vnode)->vn_ops->mkdir == NULL && (flag & O_DIRECTORY)){
         ret_val = -ENOTDIR;
     }*/

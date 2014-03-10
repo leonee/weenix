@@ -320,6 +320,7 @@ do_mkdir(const char *path)
         case -ENOENT:
         case -ENOTDIR:
         case -ENAMETOOLONG:
+        case -EINVAL:
             return dir_result;
         default:
             /* do nothing */;
@@ -557,6 +558,7 @@ do_chdir(const char *path)
     }
 
     if (new_wd->vn_ops->mkdir == NULL){
+        vput(new_wd);
         return -ENOTDIR;
     }
     
