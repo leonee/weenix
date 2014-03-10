@@ -144,20 +144,15 @@ int
 do_close(int fd)
 {
     dbg(DBG_VFS, "calling do_close on fd %d\n", fd);
-    if (fd < 0 || fd >= NFILES){
+
+    if (fd < 0 || fd >= NFILES || curproc->p_files[fd] == NULL){
+        dbg(DBG_VFS, "invalid file descriptor %d. Unable to close file", fd);
         return -EBADF;
     }
 
     file_t *f = curproc->p_files[fd];
 
-    if (f == NULL){
-        dbg(DBG_VFS, "invalid file descriptor %d. Unable to close file", fd);
-        return -EBADF;
-    }
-
-    int orig_refcount = f->f_vnode->vn_mmobj.mmo_refcount;
-
-    curproc->p_files[fd] = 0;
+    curproc->p_files[fd] = NULL;
 
     fput(f);
 
@@ -216,9 +211,22 @@ do_dup(int fd)
 int
 do_dup2(int ofd, int nfd)
 {
-    panic("nyi\n");
-        NOT_YET_IMPLEMENTED("VFS: do_dup2");
-        return -1;
+    if (ofd < 0 || ofd >= NFILES || curproc->p_files[ofd] == NULL
+        || nfd < 0 || nfd >= NFILES){
+        return -EBADF;
+    }
+
+    if (ofd != nfd && curproc->p_files[nfd] != NULL){
+        do_close(nfd);
+    }
+
+    file_t *f = fget(ofd);
+
+    KASSERT(f != NULL && "fd not valid/not open");
+
+    curproc->p_files[nfd] = f;
+
+    return nfd;
 }
 
 /*

@@ -1,14 +1,8 @@
-in vref()
-    - what does it mean for a filesystem's linkcount to be 0? 
-
 in lookup()
     -dafuq does lookup return?
 
 in do_open()
     - how do we create a vnode?
-
-in do_close()
-    - am I supposed to vput() the vnode for the file?
 
 in open_namev()
     - what do we do about errors?
@@ -17,8 +11,5 @@ in open_namev()
 in do_write()
     - if the file is extended, do we need to manually modify the len field?
 
-in do_getdent()
-    - what does this return?
-
-In general:
-    - Where do we set a proc's cwd?
+in do_dup2()
+    - do we return an error if do_close() fails?
