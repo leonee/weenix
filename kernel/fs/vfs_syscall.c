@@ -183,12 +183,25 @@ do_close(int fd)
 int
 do_dup(int fd)
 {
-/*    if (fd < 0 || fd >= NFILES){*/
-        /*return -EBADF;*/
-    /*} else if (curproc-p_files[fd] == NULL){*/
+    if (fd < 0 || fd >= NFILES || curproc->p_files[fd] == NULL){
+        return -EBADF;
+    }
 
-    /*}*/
-    return -1;
+    file_t *f = fget(fd);
+
+    KASSERT(f != NULL && "fd not valid/not open");
+
+    int new_fd = get_empty_fd(curproc);
+
+    if (new_fd < 0){
+        KASSERT(new_fd == -EMFILE);
+        fput(f);
+        return new_fd;
+    }
+
+    curproc->p_files[new_fd] = f;
+
+    return new_fd;
 }
 
 /* Same as do_dup, but insted of using get_empty_fd() to get the new fd,
