@@ -104,12 +104,17 @@ do_open(const char *filename, int oflags)
         f->f_mode = FMODE_APPEND;
     }
 
-    if (oflags == O_APPEND || oflags == O_RDONLY){
-        f->f_mode |= FMODE_READ;
-    } else if (oflags & O_WRONLY){
+    if (oflags & O_WRONLY){
         f->f_mode |= FMODE_WRITE;
     } else if (oflags & O_RDWR){
         f->f_mode |= FMODE_READ | FMODE_WRITE;
+    } else if (oflags == O_RDONLY || oflags == (O_RDONLY | O_CREAT)
+            || oflags == (O_RDONLY | O_APPEND)
+            || oflags == (O_RDONLY | O_CREAT | O_APPEND)){
+        f->f_mode |= FMODE_READ;
+    } else {
+        dbg(DBG_VFS, "oflags not valid\n");
+        return -EINVAL;
     }
 
     /* make sure we have a valid mode */
@@ -124,9 +129,10 @@ do_open(const char *filename, int oflags)
     dbg(DBG_VFS, "found the vnode with id %d. Current refcount is %d\n",
             f->f_vnode->vn_vno, f->f_vnode->vn_mmobj.mmo_refcount);
 
-    /* TODO lots of error checking */
-
-    KASSERT(open_result == 0 && "open_namev failed\n");
+    if (open_result < 0){
+        curproc->p_files[fd] = NULL;
+        fput(f);
+    }
 
     /* step 6: fill in the fields of the file_t */
     /* no need to call vref, since open_namev() took care of that*/

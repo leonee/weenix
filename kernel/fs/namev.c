@@ -25,7 +25,6 @@
 int
 lookup(vnode_t *dir, const char *name, size_t len, vnode_t **result)
 {
-    dbg(DBG_VFS, "calling lookup on %s\n", name);
     if (dir->vn_ops->lookup == NULL){
         return -ENOTDIR;
     }
@@ -44,8 +43,6 @@ lookup(vnode_t *dir, const char *name, size_t len, vnode_t **result)
 
     int lookup_result = dir->vn_ops->lookup(dir, name, len, result);
     
-    dbg(DBG_VFS, "result of lookup: %d\n", lookup_result);
-
     return lookup_result;
 }
 
@@ -72,7 +69,6 @@ int
 dir_namev(const char *pathname, size_t *namelen, const char **name,
           vnode_t *base, vnode_t **res_vnode)
 {
-    dbg(DBG_VFS, "calling dir_namev on %s\n", pathname);
     vnode_t *parent = NULL;
     vnode_t *curr;
 
@@ -95,6 +91,7 @@ dir_namev(const char *pathname, size_t *namelen, const char **name,
     int next_name = 0;
     int lookup_result = 1;
     int cur_name_len;
+    int errcode = 0;
 
     while (lookup_result >= 0 && pathname[next_name] != '\0'){
         if (parent != NULL){
@@ -113,6 +110,11 @@ dir_namev(const char *pathname, size_t *namelen, const char **name,
         /* save the length of the current dir name in case we need it
          * outside the loop (if the current dir is actually the base) */
         cur_name_len = next_name - dir_name_start;
+
+        if (next_name - dir_name_start > STR_MAX){
+            errcode = -ENAMETOOLONG;
+            break;
+        }
 
         /* then, look up the node */
         lookup_result = lookup(parent, (pathname + dir_name_start),
@@ -134,7 +136,12 @@ dir_namev(const char *pathname, size_t *namelen, const char **name,
         vput(parent);
 
         return lookup_result;
-    } 
+    } else if (errcode != 0){
+        dbg(DBG_VFS, "lookup failed with error code %d\n", errcode);
+        vput(parent);
+
+        return errcode;
+    }
     
     if (lookup_result == 0){
         vput(curr);
@@ -159,9 +166,6 @@ dir_namev(const char *pathname, size_t *namelen, const char **name,
 int
 open_namev(const char *pathname, int flag, vnode_t **res_vnode, vnode_t *base)
 {
-    /* TODO figure out how to handle looking up something with no path */
-    dbg(DBG_VFS, "calling open_namev on %s\n", pathname);
-
     /* TODO locking */
     size_t namelen;
     const char *name;
@@ -171,19 +175,33 @@ open_namev(const char *pathname, int flag, vnode_t **res_vnode, vnode_t *base)
     int namev_result = dir_namev(pathname, &namelen, &name, base, &dir);
 
     if (namev_result < 0){
-        dbg(DBG_VFS, "couldn't fine the file %s\n", name);
+        dbg(DBG_VFS, "couldn't find the file %s\n", name);
         return namev_result;
     }
-   
+  
     int lookup_res = lookup(dir, name, namelen, res_vnode);
 
-    if (lookup_res < 0 && (flag & O_CREAT)){
-        dir->vn_ops->create(dir, name, namelen, res_vnode);
-    }
-    
+    int ret_val = lookup_res;
+
+    if (lookup_res < 0){
+       if (flag & O_CREAT){
+           ret_val = dir->vn_ops->create(dir, name, namelen, res_vnode);
+       } else {
+           ret_val = -ENOENT;
+       }
+    } else if (flag & O_CREAT){
+        ret_val = -EEXIST;
+    } else if ((*res_vnode)->vn_ops->mkdir != NULL &&
+            ((flag & O_WRONLY) || (flag & O_RDWR))){
+        
+        ret_val = -EISDIR;
+    }/* else if ((*res_vnode)->vn_ops->mkdir == NULL && (flag & O_DIRECTORY)){
+        ret_val = -ENOTDIR;
+    }*/
+
     vput(dir);
 
-    return lookup_res;
+    return ret_val;
 }
 
 #ifdef __GETCWD__

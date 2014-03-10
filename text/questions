@@ -7,9 +7,12 @@ in do_open()
 in open_namev()
     - what do we do about errors?
     - should we be locking?
+    - how the fuck do we handle ENXIO?
 
 in do_write()
     - if the file is extended, do we need to manually modify the len field?
 
 in do_dup2()
     - do we return an error if do_close() fails?
+
+is max string length STR_MAX?

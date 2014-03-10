@@ -41,7 +41,6 @@
 int
 do_read(int fd, void *buf, size_t nbytes)
 {
-    dbg(DBG_VFS, "calling do_read on fd %d\n", fd);
     if (fd < 0 || fd >= NFILES){
         return -EBADF;
     }
@@ -94,7 +93,6 @@ do_read(int fd, void *buf, size_t nbytes)
 int
 do_write(int fd, const void *buf, size_t nbytes)
 {
-    dbg(DBG_VFS, "calling do_write on fd %d\n", fd);
     if (fd < 0 || fd >= NFILES){
         return -EBADF;
     }
@@ -143,8 +141,6 @@ do_write(int fd, const void *buf, size_t nbytes)
 int
 do_close(int fd)
 {
-    dbg(DBG_VFS, "calling do_close on fd %d\n", fd);
-
     if (fd < 0 || fd >= NFILES || curproc->p_files[fd] == NULL){
         dbg(DBG_VFS, "invalid file descriptor %d. Unable to close file", fd);
         return -EBADF;
@@ -257,7 +253,6 @@ do_dup2(int ofd, int nfd)
 int
 do_mknod(const char *path, int mode, unsigned devid)
 {
-    dbg(DBG_VFS, "calling do_mknod on %s\n", path);
     if (mode != S_IFCHR && mode != S_IFBLK){
         return -EINVAL;
     }
@@ -315,7 +310,6 @@ do_mknod(const char *path, int mode, unsigned devid)
 int
 do_mkdir(const char *path)
 {
-    dbg(DBG_VFS, "calling do_mkdir on %s\n", path);
     size_t namelen;
     const char *name;
     vnode_t *dir;
@@ -371,8 +365,6 @@ do_mkdir(const char *path)
 int
 do_rmdir(const char *path)
 {
-    dbg(DBG_VFS, "calling do_rmdir on %s\n", path);
-
     size_t namelen;
     const char *name;
     vnode_t *dir;
@@ -426,8 +418,6 @@ do_rmdir(const char *path)
 int
 do_unlink(const char *path)
 {
-    dbg(DBG_VFS, "calling do_unlink on %s\n", path);
-
     size_t namelen;
     const char *name;
     vnode_t *dir;
@@ -482,8 +472,6 @@ do_unlink(const char *path)
 int
 do_link(const char *from, const char *to)
 {
-    dbg(DBG_VFS, "calling do_link, from %s to %s\n", from, to);
-
     vnode_t *from_vn;
 
     int on_res = open_namev(from, O_RDONLY, &from_vn, NULL);
@@ -533,8 +521,6 @@ do_link(const char *from, const char *to)
 int
 do_rename(const char *oldname, const char *newname)
 {
-    dbg(DBG_VFS, "calling do_rename, from %s to %s\n", oldname, newname);
-
     int link_res = do_link(oldname, newname);
 
     if (link_res < 0){
@@ -561,8 +547,6 @@ do_rename(const char *oldname, const char *newname)
 int
 do_chdir(const char *path)
 {
-    dbg(DBG_VFS, "calling do_chdir on %s\n", path);
-
     vnode_t *new_wd;
 
     int open_namev_res = open_namev(path, O_RDONLY, &new_wd, NULL);
@@ -570,6 +554,10 @@ do_chdir(const char *path)
     if (open_namev_res < 0){
         dbg(DBG_VFS, "do_chdir failed with error %d\n", open_namev_res);
         return open_namev_res;
+    }
+
+    if (new_wd->vn_ops->mkdir == NULL){
+        return -ENOTDIR;
     }
     
     vput(curproc->p_cwd);
@@ -596,7 +584,6 @@ do_chdir(const char *path)
 int
 do_getdent(int fd, struct dirent *dirp)
 {
-    dbg(DBG_VFS, "calling do_getdent on fd %d\n", fd);
     if (fd < 0 || fd >= NFILES){
         return -EBADF;
     }
@@ -641,7 +628,6 @@ do_getdent(int fd, struct dirent *dirp)
 int
 do_lseek(int fd, int offset, int whence)
 {
-    dbg(DBG_VFS, "calling do_lseek on fd %d\n", fd);
     if (fd < 0 || fd >= NFILES){
         return -EBADF;
     }
@@ -682,7 +668,6 @@ do_lseek(int fd, int offset, int whence)
 int
 do_stat(const char *path, struct stat *buf)
 {
-    dbg(DBG_VFS, "calling do_stat on  %s\n", path);
     vnode_t *vn;
 
     int result = open_namev(path, O_RDONLY, &vn, NULL);
