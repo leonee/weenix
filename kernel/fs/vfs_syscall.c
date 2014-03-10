@@ -42,7 +42,7 @@ int
 do_read(int fd, void *buf, size_t nbytes)
 {
     dbg(DBG_VFS, "calling do_read on fd %d\n", fd);
-    if (fd < 0){
+    if (fd < 0 || fd >= NFILES){
         return -EBADF;
     }
 
@@ -95,7 +95,7 @@ int
 do_write(int fd, const void *buf, size_t nbytes)
 {
     dbg(DBG_VFS, "calling do_write on fd %d\n", fd);
-    if (fd < 0){
+    if (fd < 0 || fd >= NFILES){
         return -EBADF;
     }
 
@@ -144,7 +144,7 @@ int
 do_close(int fd)
 {
     dbg(DBG_VFS, "calling do_close on fd %d\n", fd);
-    if (fd < 0){
+    if (fd < 0 || fd >= NFILES){
         return -EBADF;
     }
 
@@ -183,9 +183,12 @@ do_close(int fd)
 int
 do_dup(int fd)
 {
-    panic("nyi\n");
-        NOT_YET_IMPLEMENTED("VFS: do_dup");
-        return -1;
+/*    if (fd < 0 || fd >= NFILES){*/
+        /*return -EBADF;*/
+    /*} else if (curproc-p_files[fd] == NULL){*/
+
+    /*}*/
+    return -1;
 }
 
 /* Same as do_dup, but insted of using get_empty_fd() to get the new fd,
@@ -573,7 +576,7 @@ int
 do_getdent(int fd, struct dirent *dirp)
 {
     dbg(DBG_VFS, "calling do_getdent on fd %d\n", fd);
-    if (fd < 0){
+    if (fd < 0 || fd >= NFILES){
         return -EBADF;
     }
 
@@ -618,7 +621,7 @@ int
 do_lseek(int fd, int offset, int whence)
 {
     dbg(DBG_VFS, "calling do_lseek on fd %d\n", fd);
-    if (fd < 0){
+    if (fd < 0 || fd >= NFILES){
         return -EBADF;
     }
 
