@@ -509,9 +509,16 @@ do_link(const char *from, const char *to)
 int
 do_rename(const char *oldname, const char *newname)
 {
-    panic("nyi\n");
-        NOT_YET_IMPLEMENTED("VFS: do_rename");
-        return -1;
+    dbg(DBG_VFS, "calling do_rename, from %s to %s\n", oldname, newname);
+
+    int link_res = do_link(oldname, newname);
+
+    if (link_res < 0){
+        dbg(DBG_VFS, "do_link failed\n");
+        return link_res;
+    }
+
+    return do_unlink(oldname);
 }
 
 /* Make the named directory the current process's cwd (current working
