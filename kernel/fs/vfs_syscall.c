@@ -360,11 +360,30 @@ do_rmdir(const char *path)
         return dn_res;
     }
 
-    int res = dir->vn_ops->rmdir(dir, name, namelen);
+    int to_ret;
+    vnode_t *lookup_vn;
+    int lookup_res;
+
+    if (namelen == 1 && name[0] == '.'){
+        to_ret = -EINVAL;
+    } else if (namelen == 2 && name[0] == '.' && name[1] == '.'){
+        to_ret = -ENOTEMPTY;
+    } else if (dir->vn_ops->rmdir == NULL){
+        to_ret = -ENOTDIR;
+    } else if ((lookup_res = lookup(dir, name, namelen, &lookup_vn)) != 0){
+        /*probably because the dir doesn't exist */
+        to_ret = lookup_res;
+    } else if (lookup_vn->vn_ops->rmdir == NULL){
+        to_ret = -ENOTDIR;
+        vput(lookup_vn);
+    } else {
+        to_ret = dir->vn_ops->rmdir(dir, name, namelen);
+        vput(lookup_vn);
+    }
 
     vput(dir);
 
-    return res;
+    return to_ret;
 }
 
 /*
@@ -383,9 +402,38 @@ do_rmdir(const char *path)
 int
 do_unlink(const char *path)
 {
-    panic("nyi\n");
-        NOT_YET_IMPLEMENTED("VFS: do_unlink");
-        return -1;
+    dbg(DBG_VFS, "calling do_unlink on %s\n", path);
+
+    size_t namelen;
+    const char *name;
+    vnode_t *dir;
+
+    int dn_res = dir_namev(path, &namelen, &name, NULL, &dir);
+
+    if (dn_res < 0){
+        dbg(DBG_VFS, "dir_namev failed\n");
+        return dn_res;
+    }
+
+    int to_ret;
+    vnode_t *lookup_vn;
+    int lookup_res;
+
+    if (dir->vn_ops->unlink == NULL){
+        to_ret = -ENOTDIR;
+    } else if ((lookup_res = lookup(dir, name, namelen, &lookup_vn)) != 0){
+        /* probably because the file doesn't exist */
+        to_ret = lookup_res;
+    } else if (lookup_vn->vn_ops->rmdir != NULL){
+        to_ret = -EISDIR;
+        vput(lookup_vn);
+    } else {
+        to_ret = dir->vn_ops->unlink(dir, name, namelen);
+        vput(lookup_vn);
+    }
+
+    vput(dir);
+    return to_ret;
 }
 
 /* To link:
