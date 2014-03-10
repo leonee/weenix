@@ -347,9 +347,24 @@ do_mkdir(const char *path)
 int
 do_rmdir(const char *path)
 {
-    panic("nyi\n");
-        NOT_YET_IMPLEMENTED("VFS: do_rmdir");
-        return -1;
+    dbg(DBG_VFS, "calling do_rmdir on %s\n", path);
+
+    size_t namelen;
+    const char *name;
+    vnode_t *dir;
+
+    int dn_res = dir_namev(path, &namelen, &name, NULL, &dir);
+
+    if (dn_res < 0){
+        dbg(DBG_VFS, "dir_namev failed\n");
+        return dn_res;
+    }
+
+    int res = dir->vn_ops->rmdir(dir, name, namelen);
+
+    vput(dir);
+
+    return res;
 }
 
 /*
