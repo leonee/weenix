@@ -410,9 +410,44 @@ do_unlink(const char *path)
 int
 do_link(const char *from, const char *to)
 {
-    panic("nyi\n");
-        NOT_YET_IMPLEMENTED("VFS: do_link");
-        return -1;
+    dbg(DBG_VFS, "calling do_link, from %s to %s\n", from, to);
+
+    vnode_t *from_vn;
+
+    int on_res = open_namev(from, O_RDONLY, &from_vn, NULL);
+
+    if (on_res < 0){
+        dbg(DBG_VFS, "open_namev failed\n");
+        return on_res;
+    }
+
+    size_t namelen;
+    const char *name;
+    vnode_t *to_vn;
+
+    int dn_res = dir_namev(to, &namelen, &name, NULL, &to_vn);
+
+    if (dn_res < 0){
+        dbg(DBG_VFS, "dir_namev failed\n");
+        vput(from_vn);
+        return dn_res;
+    }
+
+    int to_ret;
+    vnode_t *lookup_vn;
+
+    if (to_vn->vn_ops->link == NULL){
+        return -ENOTDIR;
+    } else if (lookup(to_vn, name, namelen, &lookup_vn) == 0){
+        vput(lookup_vn);
+        to_ret = -EEXIST;
+    } else {
+        to_ret = to_vn->vn_ops->link(from_vn, to_vn, name, namelen);
+    }
+
+    vput(to_vn);
+    vput(from_vn);
+    return to_ret;
 }
 
 /*      o link newname to oldname
