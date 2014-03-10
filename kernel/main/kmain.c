@@ -64,6 +64,8 @@ static void       hard_shutdown(void);
 
 static context_t bootstrap_context;
 
+int vfstest_main(int argc, char **argv);
+
 /**
  * This is the first real C function ever called. It performs a lot of
  * hardware-specific initialization, then creates a pseudo-context to
@@ -321,6 +323,7 @@ initproc_run(int arg1, void *arg2)
     run_memdev_tests();
     run_ata_tests();
 */
+    vfstest_main(1, NULL);
     
     kshell_add_command("proctest", proctests, "tests proc code");
 
