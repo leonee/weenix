@@ -104,9 +104,9 @@ do_open(const char *filename, int oflags)
         f->f_mode = FMODE_APPEND;
     }
 
-    if (oflags & O_WRONLY){
+    if ((oflags & O_WRONLY) && !(oflags & O_RDWR)){
         f->f_mode |= FMODE_WRITE;
-    } else if (oflags & O_RDWR){
+    } else if ((oflags & O_RDWR) && !(oflags & O_WRONLY)){
         f->f_mode |= FMODE_READ | FMODE_WRITE;
     } else if (oflags == O_RDONLY || oflags == (O_RDONLY | O_CREAT)
             || oflags == (O_RDONLY | O_APPEND)
@@ -115,6 +115,7 @@ do_open(const char *filename, int oflags)
     } else {
         dbg(DBG_VFS, "oflags not valid\n");
         fput(f);
+        curproc->p_files[fd] = NULL;
         return -EINVAL;
     }
 

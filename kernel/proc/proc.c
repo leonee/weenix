@@ -235,7 +235,7 @@ proc_cleanup(int status)
     int i;
     for (i = 0; i < NFILES; i++){
         if (curproc->p_files[i] != NULL){
-            fput(curproc->p_files[i]);
+            do_close(i);
         }
     }
     vput(curproc->p_cwd);

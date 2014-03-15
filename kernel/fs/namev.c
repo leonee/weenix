@@ -122,7 +122,7 @@ dir_namev(const char *pathname, size_t *namelen, const char **name,
          * outside the loop (if the current dir is actually the base) */
         cur_name_len = next_name - dir_name_start;
 
-        if (next_name - dir_name_start > STR_MAX){
+        if (next_name - dir_name_start > NAME_LEN){
             errcode = -ENAMETOOLONG;
             break;
         }

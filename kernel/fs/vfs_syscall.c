@@ -215,7 +215,7 @@ do_dup2(int ofd, int nfd)
     }
 
     if (ofd != nfd && curproc->p_files[nfd] != NULL){
-        do_close(nfd);
+        KASSERT(do_close(nfd) == 0);
     }
 
     file_t *f = fget(ofd);

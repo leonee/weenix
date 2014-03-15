@@ -1,21 +1,4 @@
-in lookup()
-    -dafuq does lookup return?
-
-in do_open()
-    - how do we create a vnode?
-
 in open_namev()
-    - what do we do about errors?
-    - should we be locking?
-    - how the fuck do we handle ENXIO?
+    - should we be locking? 
 
-in do_write()
-    - if the file is extended, do we need to manually modify the len field?
-
-in do_dup2()
-    - do we return an error if do_close() fails?
-
-is max string length STR_MAX?
-
-In general:
-    - how to handle lookups of "/"?
+Answer: Lock!

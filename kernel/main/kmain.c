@@ -336,9 +336,9 @@ initproc_run(int arg1, void *arg2)
 
     while ((err = kshell_execute_next(ksh)) > 0);
     KASSERT(err == 0 && "kernel shell exited with an error\n");
+    destroy_kshell_commands(); 
     kshell_destroy(ksh);
 
-    destroy_kshell_commands(); 
 /*
    list_t *children = &curproc->p_children; 
    list_link_t *link;
