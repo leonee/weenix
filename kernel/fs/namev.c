@@ -147,7 +147,7 @@ dir_namev(const char *pathname, size_t *namelen, const char **name,
     }
 
     /* see if we exited in error -- these are only true if we've entered the loop */
-    if (lookup_result < 0 && pathname[next_name] != 0){
+    if (lookup_result < 0 && lookup_result != -ENOENT){
         dbg(DBG_VFS, "lookup failed with error code %d\n", lookup_result);
         vput(parent);
 
@@ -157,6 +157,12 @@ dir_namev(const char *pathname, size_t *namelen, const char **name,
         vput(parent);
 
         return errcode;
+    } else if (pathname[next_name] != '\0'){
+        KASSERT(lookup_result == -ENOENT);
+        dbg(DBG_VFS, "lookup failed with error code %d\n", -ENOENT);
+
+        vput(parent);
+        return -ENOENT;
     }
     
     if (lookup_result == 0){
@@ -199,12 +205,14 @@ open_namev(const char *pathname, int flag, vnode_t **res_vnode, vnode_t *base)
 
     int ret_val = lookup_res;
 
-    if (lookup_res < 0){
+    if (lookup_res == -ENOENT){
        if (flag & O_CREAT){
            ret_val = dir->vn_ops->create(dir, name, namelen, res_vnode);
        } else {
            ret_val = -ENOENT;
        }
+    } else if (lookup_res < 0){
+        ret_val = lookup_res;
     } else if (flag & O_CREAT){
         ret_val = -EEXIST;
         vput(*res_vnode);

@@ -452,7 +452,7 @@ vfstest_fd(void)
         syscall_fail(dup2(0, -1), EBADF);
 
         /* if the fds are equal, but the first is invalid or out of the
-         * allowed range */
+         allowed range */
         syscall_fail(dup2(BAD_FD, BAD_FD), EBADF);
         syscall_fail(dup2(HUGE_FD, HUGE_FD), EBADF);
         syscall_fail(dup2(-1, -1), EBADF);

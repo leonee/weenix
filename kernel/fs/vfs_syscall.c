@@ -174,6 +174,7 @@ do_close(int fd)
 int
 do_dup(int fd)
 {
+    dbg(DBG_VFS, "calling do_dup on fd %d\n", fd);
     if (fd < 0 || fd >= NFILES || curproc->p_files[fd] == NULL){
         return -EBADF;
     }
@@ -207,6 +208,7 @@ do_dup(int fd)
 int
 do_dup2(int ofd, int nfd)
 {
+    dbg(DBG_VFS, "calling do_dup2 on ofd %d and nfd %d\n", ofd, nfd);
     if (ofd < 0 || ofd >= NFILES || curproc->p_files[ofd] == NULL
         || nfd < 0 || nfd >= NFILES){
         return -EBADF;
@@ -318,6 +320,7 @@ do_mkdir(const char *path)
 
     switch (dir_result){
         case -ENOENT:
+            return dir_result;
         case -ENOTDIR:
         case -ENAMETOOLONG:
         case -EINVAL:
@@ -333,14 +336,14 @@ do_mkdir(const char *path)
 
     if (lookup_result == -ENOTDIR){
         ret_code = -ENOTDIR;
-    } else if (lookup_result == 0){
+    } if (lookup_result == 0){
         /* the file already exists */
         vput(base_node);
         ret_code = -EEXIST;
     } else {
+        KASSERT(lookup_result == -ENOENT);
         ret_code = dir->vn_ops->mkdir(dir, name, namelen);
-    }
-
+    } 
     vput(dir);
     return ret_code;
 }
