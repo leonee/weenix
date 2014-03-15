@@ -596,7 +596,7 @@ vfstest_open(void)
 
         /* Cannot unlink a directory */
         syscall_success(mkdir("file06", 0));
-        syscall_fail(unlink("file06"), EPERM);
+        syscall_fail(unlink("file06"), EISDIR);
         syscall_success(rmdir("file06"));
 
         /* Cannot unlink a non-existent file */
