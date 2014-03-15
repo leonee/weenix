@@ -320,7 +320,6 @@ do_mkdir(const char *path)
 
     switch (dir_result){
         case -ENOENT:
-            return dir_result;
         case -ENOTDIR:
         case -ENAMETOOLONG:
         case -EINVAL:
@@ -643,7 +642,7 @@ do_lseek(int fd, int offset, int whence)
         return -EBADF;
     }   
 
-    if (whence == SEEK_SET && offset > 0){
+    if (whence == SEEK_SET && offset >= 0){
         f->f_pos = offset;
     } else if (whence == SEEK_CUR && f->f_pos + offset >= 0){
         f->f_pos += offset;
