@@ -41,6 +41,7 @@
 #include "fs/vfs_syscall.h"
 #include "fs/fcntl.h"
 #include "fs/stat.h"
+#include "fs/namev.c"
 
 #include "test/proctest.h"
 #include "test/ttytest.h"
@@ -218,6 +219,8 @@ idleproc_run(int arg1, void *arg2)
     if (do_mknod("/dev/zero", S_IFBLK, MEM_ZERO_DEVID) < 0){
         panic("unable to create /dev/zero");
     }
+
+    kmutex_init(&lookup_mutex);
 
 #endif
 

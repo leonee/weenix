@@ -13,6 +13,7 @@
 #include "fs/vfs.h"
 #include "fs/vnode.h"
 
+kmutex_t lookup_mutex;
 /* This takes a base 'dir', a 'name', its 'len', and a result vnode.
  * Most of the work should be done by the vnode's implementation
  * specific lookup() function, but you may want to special case
@@ -69,6 +70,8 @@ int
 dir_namev(const char *pathname, size_t *namelen, const char **name,
           vnode_t *base, vnode_t **res_vnode)
 {
+    static kmutex_t lookup_mutex;
+
     if (*pathname == '\0'){
         return -EINVAL;
     }
@@ -128,8 +131,10 @@ dir_namev(const char *pathname, size_t *namelen, const char **name,
         }
 
         /* then, look up the node */
+        kmutex_lock(&lookup_mutex);
         lookup_result = lookup(parent, (pathname + dir_name_start),
                 next_name - dir_name_start, &curr);
+        kmutex_unlock(&lookup_mutex);
 
         if (lookup_result == -ENOTDIR){
             errcode = -ENOTDIR;
