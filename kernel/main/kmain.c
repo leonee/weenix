@@ -320,12 +320,12 @@ static void destroy_kshell_commands(){
 static void *
 initproc_run(int arg1, void *arg2)
 {
-    /*
+    
     run_proc_tests();
     run_tty_tests();
     run_memdev_tests();
     run_ata_tests();
-*/
+
     vfstest_main(1, NULL);
     
     kshell_add_command("proctest", proctests, "tests proc code");
