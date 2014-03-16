@@ -32,16 +32,6 @@ lookup(vnode_t *dir, const char *name, size_t len, vnode_t **result)
 
     KASSERT(name != NULL);
 
-    if (len == 1 && name[0] == '.'){
-        *result = dir;
-        vref(*result);
-        return 0;
-    }
-    
-    if (len == 2 && name[0] == '.' && name[1] == '.'){
-        dbg(DBG_VFS, "enountered the dir '..'\n");
-    }
-
     int lookup_result = dir->vn_ops->lookup(dir, name, len, result);
     
     return lookup_result;
@@ -193,7 +183,6 @@ dir_namev(const char *pathname, size_t *namelen, const char **name,
 int
 open_namev(const char *pathname, int flag, vnode_t **res_vnode, vnode_t *base)
 {
-    /* TODO locking */
     size_t namelen;
     const char *name;
 
