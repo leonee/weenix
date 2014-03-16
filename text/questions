@@ -1,4 +1,0 @@
-in open_namev()
-    - should we be locking? 
-
-Answer: Lock!
