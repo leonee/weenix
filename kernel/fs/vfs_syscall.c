@@ -191,7 +191,7 @@ do_dup(int fd)
         return new_fd;
     }
 
-    curproc->p_files[new_fd] = f;
+    curproc->p_files[new_fd] = curproc->p_files[fd];
 
     return new_fd;
 }
@@ -209,6 +209,11 @@ int
 do_dup2(int ofd, int nfd)
 {
     dbg(DBG_VFS, "calling do_dup2 on ofd %d and nfd %d\n", ofd, nfd);
+
+    if (ofd == nfd){
+        return ofd;
+    }
+
     if (ofd < 0 || ofd >= NFILES || curproc->p_files[ofd] == NULL
         || nfd < 0 || nfd >= NFILES){
         return -EBADF;
