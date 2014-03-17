@@ -68,3 +68,33 @@
      fs/vfs_syscall.c:328                        do_stat()      VFS
            fs/vnode.c:437              special_file_read()      VFS
            fs/vnode.c:450             special_file_write()      VFS
+
+---
+       fs/s5fs/s5fs.c:216                s5fs_read_vnode()     S5FS
+       fs/s5fs/s5fs.c:230              s5fs_delete_vnode()     S5FS
+       fs/s5fs/s5fs.c:243               s5fs_query_vnode()     S5FS
+       fs/s5fs/s5fs.c:325                      s5fs_read()     S5FS
+       fs/s5fs/s5fs.c:333                     s5fs_write()     S5FS
+       fs/s5fs/s5fs.c:362                    s5fs_create()     S5FS
+       fs/s5fs/s5fs.c:378                     s5fs_mknod()     S5FS
+       fs/s5fs/s5fs.c:390                    s5fs_lookup()     S5FS
+       fs/s5fs/s5fs.c:405                      s5fs_link()     S5FS
+       fs/s5fs/s5fs.c:420                    s5fs_unlink()     S5FS
+       fs/s5fs/s5fs.c:445                     s5fs_mkdir()     S5FS
+       fs/s5fs/s5fs.c:462                     s5fs_rmdir()     S5FS
+       fs/s5fs/s5fs.c:478                   s5fs_readdir()     S5FS
+       fs/s5fs/s5fs.c:495                      s5fs_stat()     S5FS
+       fs/s5fs/s5fs.c:509                  s5fs_fillpage()     S5FS
+       fs/s5fs/s5fs.c:531                 s5fs_dirtypage()     S5FS
+       fs/s5fs/s5fs.c:541                 s5fs_cleanpage()     S5FS
+   fs/s5fs/s5fs_subr.c:66               s5_seek_to_block()     S5FS
+  fs/s5fs/s5fs_subr.c:113                  s5_write_file()     S5FS
+  fs/s5fs/s5fs_subr.c:140                   s5_read_file()     S5FS
+  fs/s5fs/s5fs_subr.c:164                 s5_alloc_block()     S5FS
+  fs/s5fs/s5fs_subr.c:362                 s5_find_dirent()     S5FS
+  fs/s5fs/s5fs_subr.c:389               s5_remove_dirent()     S5FS
+  fs/s5fs/s5fs_subr.c:407                        s5_link()     S5FS
+  fs/s5fs/s5fs_subr.c:423                s5_inode_blocks()     S5FS
+          mm/pframe.c:300                     pframe_get()     S5FS
+          mm/pframe.c:360                     pframe_pin()     S5FS
+          mm/pframe.c:376                   pframe_unpin()     S5FS
