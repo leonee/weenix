@@ -13,7 +13,11 @@
 #include "fs/vfs.h"
 #include "fs/vnode.h"
 
-kmutex_t lookup_mutex;
+/*kmutex_t lookup_mutex;*/
+
+#define KMUTEX_STATIC_INITIALIZER(name) {{{&name.km_waitq.tq_list,\
+    &name.km_waitq.tq_list}, 0}, NULL}
+
 /* This takes a base 'dir', a 'name', its 'len', and a result vnode.
  * Most of the work should be done by the vnode's implementation
  * specific lookup() function, but you may want to special case
@@ -98,6 +102,7 @@ dir_namev(const char *pathname, size_t *namelen, const char **name,
     int errcode = 0;
 
     while (lookup_result >= 0 && pathname[next_name] != '\0'){
+        static kmutex_t lookup_mutex = KMUTEX_STATIC_INITIALIZER(lookup_mutex);
         if (parent != NULL){
             vput(parent);
         }
