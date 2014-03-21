@@ -473,7 +473,6 @@ s5fs_rmdir(vnode_t *parent, const char *name, size_t namelen)
  * number of bytes read.
  */
 static int
-s5fs_readdir(vnode_t *vnode, off_t offset, struct dirent *d)
 {
         NOT_YET_IMPLEMENTED("S5FS: s5fs_readdir");
         return -1;

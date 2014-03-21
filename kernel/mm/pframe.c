@@ -297,41 +297,39 @@ pframe_fill(pframe_t *pf)
 int
 pframe_get(struct mmobj *o, uint32_t pagenum, pframe_t **result)
 {
-    pframe_t *p = pframe_get_resident(o, pagenum);
+    *result = pframe_get_resident(o, pagenum);
 
-    if (p == NULL){
-        p = pframe_alloc(o, pagenum);
+    if (*result == NULL){
+        *result = pframe_alloc(o, pagenum);
 
-        if (p == NULL){
+        if (*result == NULL){
             dbg(DBG_S5FS, "could not allocate a pframe\n");
-            *result = NULL;
             return -ENOMEM;
         }
 
-        int fill_res = pframe_fill(p);
+        int fill_res = pframe_fill(*result);
 
         if (fill_res < 0){
-            pframe_free(p);
+            pframe_free(*result);
             return fill_res;
         }
 
         /* TODO figure out how to check if pageoutdaemon needs to be called */
     } else {
-       KASSERT(!pframe_is_free(p) && "residant page marked as free?!?!?!\n");
+       KASSERT(!pframe_is_free(*result) && "residant page marked as free?!?!?!\n");
 
-       if (pframe_is_busy(p)){
-           sched_sleep_on(&p->pf_waitq);
+       if (pframe_is_busy(*result)){
+           sched_sleep_on(&(*result)->pf_waitq);
        } 
 
-       if (pframe_is_free(p)){
+       if (pframe_is_free(*result)){
            *result = NULL;
            /* TODO figure out what error to return */
            return -1;
        }
     }
 
-    KASSERT(!pframe_is_busy(p) && "trying to return a busy pframe. NO!!!\n");
-    *result = p;
+    KASSERT(!pframe_is_busy(*result) && "trying to return a busy pframe. NO!!!\n");
     return 0;
 }
 
@@ -395,7 +393,7 @@ pframe_pin(pframe_t *pf)
 
     if (!pframe_is_pinned(pf)){
         /* make sure it's in the alloc list already */
-        KASSERT(list_item(&alloc_list, pframe_t, pf_link) == pf);
+        /*KASSERT(list_item(&alloc_list, pframe_t, pf_link) == pf);*/
 
         list_remove(&pf->pf_link);
         list_insert_head(&pinned_list, &pf->pf_link);

@@ -1,3 +1,11 @@
 in pframe_get()
     - how do we see if we need to call the pageoutdaemon?
     - what error to return if pframe got freed?
+
+in s5_seek_to_block()
+    - is the block number just stored in the s5_NDIRECT_BLOCKS array,
+    or in the indirect block? In other words, does the inode store
+    the block number directory?
+    
+    - where do we use pin() and unpin()?
+

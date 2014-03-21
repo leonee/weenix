@@ -63,8 +63,76 @@ static int s5_alloc_block(s5fs_t *);
 int
 s5_seek_to_block(vnode_t *vnode, off_t seekptr, int alloc)
 {
-        NOT_YET_IMPLEMENTED("S5FS: s5_seek_to_block");
-        return -1;
+    int block_index = S5_DATA_BLOCK(seekptr);
+
+    dbg(DBG_S5FS, "casting from unsigned to signet int...\n");
+    if (block_index >= (signed) S5_MAX_FILE_BLOCKS){
+        dbg(DBG_S5FS, "file too large");
+        return -EFBIG;
+    }
+
+    s5_inode_t *inode = VNODE_TO_S5INODE(vnode);
+
+    uint32_t block_num;
+
+    if (block_index >= S5_NDIRECT_BLOCKS){
+        pframe_t *ind_page;
+
+        mmobj_t *mmo = S5FS_TO_VMOBJ(VNODE_TO_S5FS(vnode));
+
+        if (pframe_get(mmo, inode->s5_indirect_block, &ind_page) < 0){
+            panic("an indirect block is messed up\n");
+        }
+
+        block_num = ((uint32_t *) ind_page->pf_addr)[block_index - S5_NDIRECT_BLOCKS];
+
+        /* case where we've found a sparse block and need to allocate*/
+        if (block_num == 0 && alloc){
+            int new_block = s5_alloc_block(VNODE_TO_S5FS(vnode));
+
+            if (new_block == -ENOSPC){
+                dbg(DBG_S5FS, "couldn't alloc a new block\n");
+                return -ENOSPC;
+            }
+
+            KASSERT(new_block == 0 && "forgot to handle an error case");
+
+            ((uint32_t *) ind_page->pf_addr)[block_index - S5_NDIRECT_BLOCKS] = new_block;
+
+            pframe_dirty(ind_page);
+
+        }
+
+    } else {
+        block_num = inode->s5_direct_blocks[block_index];
+
+        /* case where we've found a sparse block and need to allocate*/
+        if (block_num == 0 && alloc){
+            uint32_t new_block = s5_alloc_block(VNODE_TO_S5FS(vnode));
+
+            if ((signed) new_block == -ENOSPC){
+                dbg(DBG_S5FS, "couldn't alloc a new block\n");
+                return -ENOSPC;
+            }
+
+            KASSERT(new_block == 0 && "forgot to handle an error case");
+
+            inode->s5_direct_blocks[block_index] = new_block;
+
+            uint32_t inode_block = S5_INODE_BLOCK(inode->s5_number);
+            
+            pframe_t *inode_page;
+            mmobj_t *mmo = S5FS_TO_VMOBJ(VNODE_TO_S5FS(vnode));
+
+            if (pframe_get(mmo, inode_block, &inode_page) < 0){
+                panic("an indirect block is messed up\n");
+            }
+
+            pframe_dirty(inode_page);
+        }
+    }
+
+    return block_num;
 }
 
 
@@ -136,7 +204,7 @@ s5_write_file(vnode_t *vnode, off_t seek, const char *bytes, size_t len)
  */
 int
 s5_read_file(struct vnode *vnode, off_t seek, char *dest, size_t len)
-{
+{   
         NOT_YET_IMPLEMENTED("S5FS: s5_read_file");
         return -1;
 }
