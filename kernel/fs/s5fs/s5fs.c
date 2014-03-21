@@ -505,6 +505,19 @@ s5fs_stat(vnode_t *vnode, struct stat *ss)
 static int
 s5fs_fillpage(vnode_t *vnode, off_t offset, void *pagebuf)
 {
+    int blocknum = s5_seek_to_block(vnode, offset, 0);
+
+    switch (blocknum){
+        case -EFBIG:
+        case -ENOSPC:
+            return blocknum;
+        default:
+            /* do nothing */;
+    }
+
+    KASSERT(blocknum > 0 && "forgot to handle an error case");
+
+
         NOT_YET_IMPLEMENTED("S5FS: s5fs_fillpage");
         return -1;
 }
