@@ -565,8 +565,20 @@ s5fs_dirtypage(vnode_t *vnode, off_t offset)
 static int
 s5fs_cleanpage(vnode_t *vnode, off_t offset, void *pagebuf)
 {
-        NOT_YET_IMPLEMENTED("S5FS: s5fs_cleanpage");
-        return -1;
+    int blocknum = s5_seek_to_block(vnode, offset, 1);
+
+    switch (blocknum){
+        case -EFBIG:
+        case -ENOSPC:
+            return blocknum;
+        default:
+            /* do nothing */;
+    }
+
+    KASSERT(blocknum > 0 && "forgot to handle an error case");
+
+    blockdev_t *bd = ((s5fs_t *) vnode->vn_fs->fs_i)->s5f_bdev;
+    return bd->bd_ops->write_block(bd, (char *) pagebuf, blocknum, S5_BLOCK_SIZE);
 }
 
 /* Diagnostic/Utility: */
