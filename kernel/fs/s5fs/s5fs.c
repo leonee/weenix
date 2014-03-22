@@ -472,7 +472,7 @@ s5fs_rmdir(vnode_t *parent, const char *name, size_t namelen)
  * your implementation and may or may not b e necessary.  Finally, return the
  * number of bytes read.
  */
-static int
+static int s5fs_readdir(vnode_t *vnode, off_t offset, struct dirent *d)
 {
         NOT_YET_IMPLEMENTED("S5FS: s5fs_readdir");
         return -1;
@@ -517,9 +517,9 @@ s5fs_fillpage(vnode_t *vnode, off_t offset, void *pagebuf)
 
     KASSERT(blocknum > 0 && "forgot to handle an error case");
 
+    blockdev_t *bd = ((s5fs_t *) vnode->vn_fs->fs_i)->s5f_bdev;
 
-        NOT_YET_IMPLEMENTED("S5FS: s5fs_fillpage");
-        return -1;
+    return bd->bd_ops->read_block(bd, (char *) pagebuf, blocknum, S5_BLOCK_SIZE);
 }
 
 
