@@ -515,11 +515,15 @@ s5fs_fillpage(vnode_t *vnode, off_t offset, void *pagebuf)
             /* do nothing */;
     }
 
-    KASSERT(blocknum > 0 && "forgot to handle an error case");
+    KASSERT(blocknum >= 0 && "forgot to handle an error case");
 
-    blockdev_t *bd = ((s5fs_t *) vnode->vn_fs->fs_i)->s5f_bdev;
-
-    return bd->bd_ops->read_block(bd, (char *) pagebuf, blocknum, S5_BLOCK_SIZE);
+    if (blocknum == 0){
+        bytedev_t *bd = bytedev_lookup(MEM_ZERO_DEVID);
+        return bd->cd_ops->read(bd, 0, pagebuf, S5_BLOCK_SIZE);
+    } else {
+        blockdev_t *bd = ((s5fs_t *) vnode->vn_fs->fs_i)->s5f_bdev;
+        return bd->bd_ops->read_block(bd, (char *) pagebuf, blocknum, S5_BLOCK_SIZE);
+    }
 }
 
 
