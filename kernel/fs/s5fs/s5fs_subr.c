@@ -88,16 +88,16 @@ s5_seek_to_block(vnode_t *vnode, off_t seekptr, int alloc)
 
         /* case where we've found a sparse block and need to allocate*/
         if (block_num == 0 && alloc){
-            int new_block = s5_alloc_block(VNODE_TO_S5FS(vnode));
+            int block_num = s5_alloc_block(VNODE_TO_S5FS(vnode));
 
-            if (new_block == -ENOSPC){
+            if (block_num == -ENOSPC){
                 dbg(DBG_S5FS, "couldn't alloc a new block\n");
                 return -ENOSPC;
             }
 
-            KASSERT(new_block == 0 && "forgot to handle an error case");
+            KASSERT(block_num > 0 && "forgot to handle an error case");
 
-            ((uint32_t *) ind_page->pf_addr)[block_index - S5_NDIRECT_BLOCKS] = new_block;
+            ((uint32_t *) ind_page->pf_addr)[block_index - S5_NDIRECT_BLOCKS] = block_num;
 
             pframe_dirty(ind_page);
 
@@ -108,16 +108,16 @@ s5_seek_to_block(vnode_t *vnode, off_t seekptr, int alloc)
 
         /* case where we've found a sparse block and need to allocate*/
         if (block_num == 0 && alloc){
-            uint32_t new_block = s5_alloc_block(VNODE_TO_S5FS(vnode));
+            uint32_t block_num = s5_alloc_block(VNODE_TO_S5FS(vnode));
 
-            if ((signed) new_block == -ENOSPC){
+            if ((signed) block_num == -ENOSPC){
                 dbg(DBG_S5FS, "couldn't alloc a new block\n");
                 return -ENOSPC;
             }
 
-            KASSERT(new_block == 0 && "forgot to handle an error case");
+            KASSERT(block_num == 0 && "forgot to handle an error case");
 
-            inode->s5_direct_blocks[block_index] = new_block;
+            inode->s5_direct_blocks[block_index] = block_num;
 
             uint32_t inode_block = S5_INODE_BLOCK(inode->s5_number);
             

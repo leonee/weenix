@@ -544,8 +544,19 @@ s5fs_fillpage(vnode_t *vnode, off_t offset, void *pagebuf)
 static int
 s5fs_dirtypage(vnode_t *vnode, off_t offset)
 {
-        NOT_YET_IMPLEMENTED("S5FS: s5fs_dirtypage");
-        return -1;
+    int blocknum = s5_seek_to_block(vnode, offset, 0);
+
+    switch (blocknum){
+        case -EFBIG:
+        case -ENOSPC:
+            return blocknum;
+        default: 
+            /* do nothing */;
+    }
+
+    KASSERT(blocknum >= 0 && "forgot to handle an error case");
+
+    return (blocknum == 0) ? s5_seek_to_block(vnode, offset, 1) : 0;
 }
 
 /*
