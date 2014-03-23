@@ -178,6 +178,14 @@ unlock_s5(s5fs_t *fs)
 int
 s5_write_file(vnode_t *vnode, off_t seek, const char *bytes, size_t len)
 {
+ /*   pframe_t *p;*/
+
+    /*int getres;*/
+
+    /*[> write to the first block <]*/
+    /*pframe_get(*/
+
+
         NOT_YET_IMPLEMENTED("S5FS: s5_write_file");
         return -1;
 }
@@ -205,6 +213,55 @@ s5_write_file(vnode_t *vnode, off_t seek, const char *bytes, size_t len)
 int
 s5_read_file(struct vnode *vnode, off_t seek, char *dest, size_t len)
 {   
+   /* [> need a page-aligned, page-sized buffer to pass to fillpage <]*/
+    /*char *tmpbuf = (char *) page_alloc();*/
+
+    /*if (tmpbuf == NULL){*/
+        /*panic("not enough memory");*/
+    /*}*/
+
+    /*unsigned int destpos = 0;*/
+    /*int curroffset = seek;*/
+    /*int fill_res;*/
+
+    /*[> read from the first page <]*/
+    /*fill_res = vnode->vn_ops->fillpage(vnode, curroffset, tmpbuf);*/
+
+    /*if (fill_res < 0){*/
+        /*return fill_res;*/
+    /*}*/
+
+    /*int i;*/
+    /*for (i = S5_DATA_OFFSET(seek); i < S5_BLOCK_SIZE; i++){*/
+        /*dest[destpos++] = tmpbuf[i];*/
+    /*}*/
+
+    /*[> make sure our offset is now page-aligned <]*/
+    /*curroffset += (S5_BLOCK_SIZE - S5_DATA_OFFSET(seek));*/
+
+    /*[> read from the rest of the blocks <]*/
+    /*while (destpos < len){*/
+        /*fill_res = vnode->vn_ops->fillpage(vnode, curroffset, tmpbuf);*/
+        
+        /*if (fill_res < 0){*/
+            /*dbg(DBG_S5FS, "error filling page\n");*/
+            /*return fill_res;*/
+        /*}*/
+
+        /*int j = 0;*/
+        /*while (j < S5_BLOCK_SIZE && destpos < len){*/
+            /*dest[destpos++] = tmpbuf[j];*/
+            /*j++;*/
+        /*}*/
+
+        /*curroffset += S5_BLOCK_SIZE;;*/
+    /*}*/
+
+    /*page_free((void *) tmpbuf);*/
+
+    /*return 0;*/
+
+
         NOT_YET_IMPLEMENTED("S5FS: s5_read_file");
         return -1;
 }
@@ -229,8 +286,41 @@ s5_read_file(struct vnode *vnode, off_t seek, char *dest, size_t len)
 static int
 s5_alloc_block(s5fs_t *fs)
 {
-        NOT_YET_IMPLEMENTED("S5FS: s5_alloc_block");
-        return -1;
+    s5_super_t *s = fs->s5f_super;
+
+    lock_s5(fs);
+
+    KASSERT(S5_NBLKS_PER_FNODE > s->s5s_nfree);
+
+    int free_block_num;
+
+    if (s->s5s_nfree == 0){
+        free_block_num = s->s5s_free_blocks[S5_NBLKS_PER_FNODE - 1];
+
+        if (free_block_num == -1){
+            return -ENOSPC;
+        }
+
+        /* get the pframe from which we'll replenish our list of free block nums */
+        pframe_t *next_free_blocks;
+        KASSERT(fs->s5f_bdev);
+        int get_res = pframe_get(&fs->s5f_bdev->bd_mmobj, free_block_num,
+                &next_free_blocks);
+
+        if (get_res < 0){
+            dbg(DBG_S5FS, "error in pframe_get\n");
+            return get_res;
+        }
+
+        memcpy((void *)(s->s5s_free_blocks), next_free_blocks->pf_addr, 
+                S5_NBLKS_PER_FNODE * sizeof(int));
+
+        s->s5s_nfree = S5_NBLKS_PER_FNODE;;
+    } else {
+        free_block_num = s->s5s_free_blocks[s->s5s_nfree--];
+    }
+
+    return free_block_num;
 }
 
 

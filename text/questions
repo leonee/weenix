@@ -9,3 +9,6 @@ in s5_seek_to_block()
     
     - where do we use pin() and unpin()?
 
+in s5fs_fillpage()
+    - what does this even return?
+
