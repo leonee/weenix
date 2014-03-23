@@ -213,57 +213,47 @@ s5_write_file(vnode_t *vnode, off_t seek, const char *bytes, size_t len)
 int
 s5_read_file(struct vnode *vnode, off_t seek, char *dest, size_t len)
 {   
-   /* [> need a page-aligned, page-sized buffer to pass to fillpage <]*/
-    /*char *tmpbuf = (char *) page_alloc();*/
+    unsigned int destpos = 0;
+    int get_res;
+    pframe_t *p;
 
-    /*if (tmpbuf == NULL){*/
-        /*panic("not enough memory");*/
-    /*}*/
+    /* read from the first page */
+    get_res = pframe_get(&vnode->vn_mmobj, seek + destpos, &p); 
 
-    /*unsigned int destpos = 0;*/
-    /*int curroffset = seek;*/
-    /*int fill_res;*/
+    if (get_res < 0){
+        dbg(DBG_S5FS, "error getting page\n");
+        return get_res;
+    }
 
-    /*[> read from the first page <]*/
-    /*fill_res = vnode->vn_ops->fillpage(vnode, curroffset, tmpbuf);*/
+    int data_offset = S5_DATA_OFFSET(seek + destpos);
 
-    /*if (fill_res < 0){*/
-        /*return fill_res;*/
-    /*}*/
+    memcpy((void *) dest, ((char *) p->pf_addr + data_offset),
+            (S5_BLOCK_SIZE - data_offset));
 
-    /*int i;*/
-    /*for (i = S5_DATA_OFFSET(seek); i < S5_BLOCK_SIZE; i++){*/
-        /*dest[destpos++] = tmpbuf[i];*/
-    /*}*/
+    /* make sure our offset is now page-aligned */
+    destpos += (S5_BLOCK_SIZE - S5_DATA_OFFSET(seek));
 
-    /*[> make sure our offset is now page-aligned <]*/
-    /*curroffset += (S5_BLOCK_SIZE - S5_DATA_OFFSET(seek));*/
+    /* read from the rest of the blocks */
+    while (destpos < len){
+        unsigned int curroffset = seek + destpos;
 
-    /*[> read from the rest of the blocks <]*/
-    /*while (destpos < len){*/
-        /*fill_res = vnode->vn_ops->fillpage(vnode, curroffset, tmpbuf);*/
-        
-        /*if (fill_res < 0){*/
-            /*dbg(DBG_S5FS, "error filling page\n");*/
-            /*return fill_res;*/
-        /*}*/
+        get_res = pframe_get(&vnode->vn_mmobj, curroffset, &p);
 
-        /*int j = 0;*/
-        /*while (j < S5_BLOCK_SIZE && destpos < len){*/
-            /*dest[destpos++] = tmpbuf[j];*/
-            /*j++;*/
-        /*}*/
+        if (get_res < 0){
+            dbg(DBG_S5FS, "error getting page\n");
+            return get_res;
+        }
 
-        /*curroffset += S5_BLOCK_SIZE;;*/
-    /*}*/
+        if (curroffset + S5_BLOCK_SIZE - seek > len){
+            memcpy((void *) dest, p->pf_addr, len - curroffset); 
+        } else {
+            memcpy((void *) dest, p->pf_addr, S5_BLOCK_SIZE);
+        }
 
-    /*page_free((void *) tmpbuf);*/
+        destpos += S5_BLOCK_SIZE;;
+    }
 
-    /*return 0;*/
-
-
-        NOT_YET_IMPLEMENTED("S5FS: s5_read_file");
-        return -1;
+    return 0;
 }
 
 /*
@@ -315,7 +305,7 @@ s5_alloc_block(s5fs_t *fs)
         memcpy((void *)(s->s5s_free_blocks), next_free_blocks->pf_addr, 
                 S5_NBLKS_PER_FNODE * sizeof(int));
 
-        s->s5s_nfree = S5_NBLKS_PER_FNODE;;
+        s->s5s_nfree = S5_NBLKS_PER_FNODE;
     } else {
         free_block_num = s->s5s_free_blocks[s->s5s_nfree--];
     }
