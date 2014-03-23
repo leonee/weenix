@@ -40,6 +40,7 @@
                         "to a block device");                        \
         } while (0)
 
+#define NDIRENTS 5
 
 static void s5_free_block(s5fs_t *fs, int block);
 static int s5_alloc_block(s5fs_t *);
@@ -231,10 +232,10 @@ s5_read_file(struct vnode *vnode, off_t seek, char *dest, size_t len)
 
     int data_offset = S5_DATA_OFFSET(seek);
 
-    if ((unsigned) S5_BLOCK_SIZE - data_offset > len){
+    if ((unsigned) PAGE_SIZE - data_offset > len){
         read_size = len - seek;
     } else {
-        read_size = S5_BLOCK_SIZE - data_offset;
+        read_size = PAGE_SIZE - data_offset;
     }
 
     memcpy((void *) dest, ((char *) p->pf_addr + data_offset), read_size);
@@ -253,10 +254,10 @@ s5_read_file(struct vnode *vnode, off_t seek, char *dest, size_t len)
             return get_res;
         }
 
-        if ((curroffset - seek) + S5_BLOCK_SIZE > len){
+        if ((curroffset - seek) + PAGE_SIZE > len){
             read_size = len - curroffset;
         } else {
-            read_size = S5_BLOCK_SIZE;
+            read_size = PAGE_SIZE;
         }
 
         memcpy((void *) dest, p->pf_addr, read_size);
@@ -299,6 +300,7 @@ s5_alloc_block(s5fs_t *fs)
         free_block_num = s->s5s_free_blocks[S5_NBLKS_PER_FNODE - 1];
 
         if (free_block_num == -1){
+            unlock_s5(fs);
             return -ENOSPC;
         }
 
@@ -310,6 +312,7 @@ s5_alloc_block(s5fs_t *fs)
 
         if (get_res < 0){
             dbg(DBG_S5FS, "error in pframe_get\n");
+            unlock_s5(fs);
             return get_res;
         }
 
@@ -321,6 +324,9 @@ s5_alloc_block(s5fs_t *fs)
         free_block_num = s->s5s_free_blocks[s->s5s_nfree--];
     }
 
+    s5_dirty_super(fs);
+
+    unlock_s5(fs);
     return free_block_num;
 }
 
@@ -518,8 +524,26 @@ s5_free_inode(vnode_t *vnode)
 int
 s5_find_dirent(vnode_t *vnode, const char *name, size_t namelen)
 {
-        NOT_YET_IMPLEMENTED("S5FS: s5_find_dirent");
-        return -1;
+    KASSERT(vnode->vn_ops->mkdir != NULL && "not a directory");
+
+    s5_dirent_t dirents[NDIRENTS];
+    size_t readsize = NDIRENTS * sizeof(s5_dirent_t);
+
+    off_t seek = 0;
+
+    while (seek < vnode->vn_len){
+        s5_read_file(vnode, seek, (char *) dirents, sizeof(dirents) * NDIRENTS);
+
+        int i;
+        for (i = 0; i < NDIRENTS; i++){
+            if (name_match(dirents[i].s5d_name, name, namelen)){
+                return dirents[i].s5d_inode;
+            }            
+        }
+    }
+
+    dbg(DBG_S5FS, "unable to locate directory\n");
+    return -ENOENT;
 }
 
 /*
