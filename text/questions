@@ -12,3 +12,6 @@ in s5_seek_to_block()
 in s5fs_fillpage()
     - what does this even return?
 
+in s5_read_file()
+    - how do we not allocate sparse blocks?
+

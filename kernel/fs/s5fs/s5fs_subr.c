@@ -178,14 +178,6 @@ unlock_s5(s5fs_t *fs)
 int
 s5_write_file(vnode_t *vnode, off_t seek, const char *bytes, size_t len)
 {
- /*   pframe_t *p;*/
-
-    /*int getres;*/
-
-    /*[> write to the first block <]*/
-    /*pframe_get(*/
-
-
         NOT_YET_IMPLEMENTED("S5FS: s5_write_file");
         return -1;
 }
@@ -213,8 +205,20 @@ s5_write_file(vnode_t *vnode, off_t seek, const char *bytes, size_t len)
 int
 s5_read_file(struct vnode *vnode, off_t seek, char *dest, size_t len)
 {   
+    if (seek < 0){
+        dbg(DBG_S5FS, "invalid seek value\n");
+        return -EINVAL;
+    }
+
+    if (seek + len > (unsigned) vnode->vn_len){
+        len = vnode->vn_len - seek;
+    }
+
+    KASSERT(len > 0);
+            
     unsigned int destpos = 0;
     int get_res;
+    int read_size;     
     pframe_t *p;
 
     /* read from the first page */
@@ -225,13 +229,18 @@ s5_read_file(struct vnode *vnode, off_t seek, char *dest, size_t len)
         return get_res;
     }
 
-    int data_offset = S5_DATA_OFFSET(seek + destpos);
+    int data_offset = S5_DATA_OFFSET(seek);
 
-    memcpy((void *) dest, ((char *) p->pf_addr + data_offset),
-            (S5_BLOCK_SIZE - data_offset));
+    if ((unsigned) S5_BLOCK_SIZE - data_offset > len){
+        read_size = len - seek;
+    } else {
+        read_size = S5_BLOCK_SIZE - data_offset;
+    }
+
+    memcpy((void *) dest, ((char *) p->pf_addr + data_offset), read_size);
 
     /* make sure our offset is now page-aligned */
-    destpos += (S5_BLOCK_SIZE - S5_DATA_OFFSET(seek));
+    destpos += read_size;
 
     /* read from the rest of the blocks */
     while (destpos < len){
@@ -244,16 +253,18 @@ s5_read_file(struct vnode *vnode, off_t seek, char *dest, size_t len)
             return get_res;
         }
 
-        if (curroffset + S5_BLOCK_SIZE - seek > len){
-            memcpy((void *) dest, p->pf_addr, len - curroffset); 
+        if ((curroffset - seek) + S5_BLOCK_SIZE > len){
+            read_size = len - curroffset;
         } else {
-            memcpy((void *) dest, p->pf_addr, S5_BLOCK_SIZE);
+            read_size = S5_BLOCK_SIZE;
         }
 
-        destpos += S5_BLOCK_SIZE;;
+        memcpy((void *) dest, p->pf_addr, read_size);
+
+        destpos += read_size;
     }
 
-    return 0;
+    return destpos;
 }
 
 /*
