@@ -25,6 +25,7 @@
 #define S5_INODES_PER_BLOCK     (S5_BLOCK_SIZE /  sizeof(s5_inode_t))
 #define S5_DIRENTS_PER_BLOCK    (S5_BLOCK_SIZE / sizeof(s5_dirent_t))
 #define S5_MAX_FILE_BLOCKS      (S5_NDIRECT_BLOCKS + (S5_BLOCK_SIZE / sizeof(uint32_t)))
+#define S5_MAX_FILE_SIZE        (S5_MAX_FILE_BLOCKS * S5_BLOCK_SIZE)
 #define S5_NAME_LEN             28
 
 #define S5_TYPE_FREE            0x0

@@ -66,8 +66,7 @@ s5_seek_to_block(vnode_t *vnode, off_t seekptr, int alloc)
 {
     int block_index = S5_DATA_BLOCK(seekptr);
 
-    dbg(DBG_S5FS, "casting from unsigned to signet int...\n");
-    if (block_index >= (signed) S5_MAX_FILE_BLOCKS){
+    if ((unsigned) block_index >= S5_MAX_FILE_BLOCKS){
         dbg(DBG_S5FS, "file too large");
         return -EFBIG;
     }
@@ -100,7 +99,9 @@ s5_seek_to_block(vnode_t *vnode, off_t seekptr, int alloc)
 
             ((uint32_t *) ind_page->pf_addr)[block_index - S5_NDIRECT_BLOCKS] = block_num;
 
+            pframe_pin(ind_page);
             pframe_dirty(ind_page);
+            pframe_unpin(ind_page);
 
         }
 
@@ -129,7 +130,9 @@ s5_seek_to_block(vnode_t *vnode, off_t seekptr, int alloc)
                 panic("an indirect block is messed up\n");
             }
 
+            pframe_pin(inode_page);
             pframe_dirty(inode_page);
+            pframe_unpin(inode_page);
         }
     }
 
@@ -179,8 +182,49 @@ unlock_s5(s5fs_t *fs)
 int
 s5_write_file(vnode_t *vnode, off_t seek, const char *bytes, size_t len)
 {
-        NOT_YET_IMPLEMENTED("S5FS: s5_write_file");
-        return -1;
+    if (seek < 0){
+        dbg(DBG_S5FS, "invalid seek value\n");
+        return -EINVAL;
+    }
+
+    if (seek + len > S5_MAX_FILE_SIZE){
+        len = S5_MAX_FILE_SIZE - seek;
+    }
+
+    /* TODO zero out blocks between end of file and where we're writing */
+
+    unsigned int srcpos = 0;
+    int get_res;
+    int write_size;
+    pframe_t *p;
+
+    while (srcpos < len){
+        int data_offset = S5_DATA_OFFSET(seek);
+
+        get_res = pframe_get(&vnode->vn_mmobj, seek, &p);
+
+        if (get_res < 0){
+            dbg(DBG_S5FS, "error getting page\n");
+            return get_res;
+        }
+
+        if (seek + PAGE_SIZE > len){
+            write_size = len - seek;
+        } else {
+            write_size = PAGE_SIZE - data_offset;
+        }
+
+        memcpy((char *) p->pf_addr + data_offset, (void *) bytes, write_size);
+
+        pframe_pin(p);
+        pframe_dirty(p);
+        pframe_unpin(p);
+
+        srcpos += write_size;
+        seek += write_size; 
+    }
+
+    return srcpos;
 }
 
 /*
@@ -222,47 +266,26 @@ s5_read_file(struct vnode *vnode, off_t seek, char *dest, size_t len)
     int read_size;     
     pframe_t *p;
 
-    /* read from the first page */
-    get_res = pframe_get(&vnode->vn_mmobj, seek + destpos, &p); 
-
-    if (get_res < 0){
-        dbg(DBG_S5FS, "error getting page\n");
-        return get_res;
-    }
-
-    int data_offset = S5_DATA_OFFSET(seek);
-
-    if ((unsigned) PAGE_SIZE - data_offset > len){
-        read_size = len - seek;
-    } else {
-        read_size = PAGE_SIZE - data_offset;
-    }
-
-    memcpy((void *) dest, ((char *) p->pf_addr + data_offset), read_size);
-
-    /* make sure our offset is now page-aligned */
-    destpos += read_size;
-
-    /* read from the rest of the blocks */
     while (destpos < len){
-        unsigned int curroffset = seek + destpos;
+        int data_offset = S5_DATA_OFFSET(seek);
 
-        get_res = pframe_get(&vnode->vn_mmobj, curroffset, &p);
+        get_res = pframe_get(&vnode->vn_mmobj, seek, &p);
 
         if (get_res < 0){
             dbg(DBG_S5FS, "error getting page\n");
             return get_res;
         }
 
-        if ((curroffset - seek) + PAGE_SIZE > len){
-            read_size = len - curroffset;
+        if (seek + PAGE_SIZE > len){
+            read_size = len - seek;
         } else {
-            read_size = PAGE_SIZE;
+            read_size = PAGE_SIZE - data_offset;
         }
 
-        memcpy((void *) dest, p->pf_addr, read_size);
+        memcpy((void *) dest, (char *) p->pf_addr + data_offset, read_size);
 
         destpos += read_size;
+        seek += read_size;
     }
 
     return destpos;

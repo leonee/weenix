@@ -3,6 +3,9 @@ in pframe_get()
     - what error to return if pframe got freed?
 
 in s5_seek_to_block()
+    - what to do if seekptr is great than file length
+      and we're not allocating?
+    - do we zero everything if we seek past file length?
     - where do we use pin() and unpin()?
 
 in s5fs_fillpage()
