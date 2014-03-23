@@ -580,15 +580,26 @@ s5_remove_dirent(vnode_t *vnode, const char *name, size_t namelen)
  * When this function returns, the inode refcount on the file that was linked to
  * should be incremented.
  *
- * Remember to incrament the ref counts appropriately
+ * Remember to increment the ref counts appropriately
  *
  * You probably want to use s5_find_dirent(), s5_write_file(), and s5_dirty_inode().
  */
 int
 s5_link(vnode_t *parent, vnode_t *child, const char *name, size_t namelen)
 {
-        NOT_YET_IMPLEMENTED("S5FS: s5_link");
-        return -1;
+    KASSERT(parent->vn_ops->mkdir != NULL && child->vn_ops->mkdir != NULL);
+    KASSERT(s5_find_dirent(parent, name, namelen) == -ENOENT && "file exists\n");
+
+    s5_dirent_t d;
+    d.s5d_inode = VNODE_TO_S5INODE(child)->s5_number;
+    memcpy(d.s5d_name, name, namelen);
+    d.s5d_name[namelen] = '\0';
+
+    int res = s5_write_file(parent, parent->vn_len, (char *) &d, sizeof(s5_dirent_t));
+
+    s5_dirty_inode(VNODE_TO_S5FS(parent), VNODE_TO_S5INODE(parent));
+
+    return res;
 }
 
 /*

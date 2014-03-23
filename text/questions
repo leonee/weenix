@@ -3,15 +3,10 @@ in pframe_get()
     - what error to return if pframe got freed?
 
 in s5_seek_to_block()
-    - is the block number just stored in the s5_NDIRECT_BLOCKS array,
-    or in the indirect block? In other words, does the inode store
-    the block number directory?
-    
     - where do we use pin() and unpin()?
 
 in s5fs_fillpage()
     - what does this even return?
 
-in s5_read_file()
-    - how do we not allocate sparse blocks?
-
+in s5_link()
+    - why do we need to call s5_find_dirent()?
