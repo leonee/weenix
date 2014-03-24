@@ -40,7 +40,7 @@
                         "to a block device");                        \
         } while (0)
 
-#define NDIRENTS 5
+#define NDIRENTS 10
 
 static void s5_free_block(s5fs_t *fs, int block);
 static int s5_alloc_block(s5fs_t *);

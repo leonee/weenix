@@ -13,3 +13,8 @@ in s5fs_fillpage()
 
 in s5_link()
     - why do we need to call s5_find_dirent()?
+
+in s5fs_mkdir()
+    - should we vput the child vnode?
+
+
