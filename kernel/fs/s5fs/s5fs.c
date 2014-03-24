@@ -300,8 +300,7 @@ s5fs_delete_vnode(vnode_t *vnode)
 static int
 s5fs_query_vnode(vnode_t *vnode)
 {
-        NOT_YET_IMPLEMENTED("S5FS: s5fs_query_vnode");
-        return 0;
+    return (VNODE_TO_S5INODE(vnode)->s5_linkcount > 1);
 }
 
 /*
