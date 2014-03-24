@@ -610,8 +610,10 @@ s5_remove_dirent(vnode_t *vnode, const char *name, size_t namelen)
 int
 s5_link(vnode_t *parent, vnode_t *child, const char *name, size_t namelen)
 {
-    KASSERT(parent->vn_ops->mkdir != NULL && child->vn_ops->mkdir != NULL);
+    KASSERT(parent->vn_ops->mkdir != NULL);
     KASSERT(s5_find_dirent(parent, name, namelen) == -ENOENT && "file exists\n");
+
+    int init_refcount = VNODE_TO_S5INODE(child)->s5_linkcount;
 
     s5_dirent_t d;
     d.s5d_inode = VNODE_TO_S5INODE(child)->s5_number;
@@ -621,6 +623,15 @@ s5_link(vnode_t *parent, vnode_t *child, const char *name, size_t namelen)
     int res = s5_write_file(parent, parent->vn_len, (char *) &d, sizeof(s5_dirent_t));
 
     s5_dirty_inode(VNODE_TO_S5FS(parent), VNODE_TO_S5INODE(parent));
+
+    dbg(DBG_S5FS, "incrementing link count on inode %d from %d to %d",
+            VNODE_TO_S5INODE(child)->s5_number, VNODE_TO_S5INODE(child)->s5_linkcount,
+            VNODE_TO_S5INODE(child)->s5_linkcount + 1);
+    
+    VNODE_TO_S5INODE(child)->s5_linkcount++;
+
+    KASSERT(VNODE_TO_S5INODE(child)->s5_linkcount == init_refcount + 1 &&
+            "link count not incremented properly");
 
     return res;
 }

@@ -402,8 +402,8 @@ s5fs_lookup(vnode_t *base, const char *name, size_t namelen, vnode_t **result)
 static int
 s5fs_link(vnode_t *src, vnode_t *dir, const char *name, size_t namelen)
 {
-        NOT_YET_IMPLEMENTED("S5FS: s5fs_link");
-        return -1;
+    KASSERT(dir->vn_ops->mkdir != NULL);
+    return s5_link(dir, src, name, namelen);
 }
 
 /*
