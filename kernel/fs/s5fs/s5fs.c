@@ -214,7 +214,46 @@ s5fs_mount(struct fs *fs)
 static void
 s5fs_read_vnode(vnode_t *vnode)
 {
-        NOT_YET_IMPLEMENTED("S5FS: s5fs_read_vnode");
+    pframe_t *p;
+
+    mmobj_t *fs_mmobj = S5FS_TO_VMOBJ(VNODE_TO_S5FS(vnode));
+
+    if (pframe_get(fs_mmobj, S5_INODE_BLOCK(vnode->vn_vno), &p)){
+        panic("pframe_get failed. What the hell do we do?\n");
+    }
+
+    pframe_pin(p);
+
+    s5_inode_t *inode = ((s5_inode_t *) p->pf_addr) + S5_INODE_OFFSET(vnode->vn_vno);
+    
+    /* generic initializations */
+    vnode->vn_len = inode->s5_size;
+    vnode->vn_i = (void *) inode;
+    inode->s5_linkcount++;
+
+    /* type-specific initializations */
+    KASSERT(inode->s5_type == S5_TYPE_DATA
+            || inode->s5_type == S5_TYPE_DIR
+            || inode->s5_type == S5_TYPE_CHR
+            || inode->s5_type == S5_TYPE_BLK);
+
+    switch (inode->s5_type){
+        case S5_TYPE_DATA:
+            vnode->vn_ops = &s5fs_file_vops; 
+            vnode->vn_mode = S_IFREG;
+            break;
+        case S5_TYPE_DIR:
+            vnode->vn_ops = &s5fs_dir_vops;
+            vnode->vn_mode = S_IFDIR;
+            break;
+        case S5_TYPE_CHR:
+            vnode->vn_mode = S_IFCHR;
+            vnode->vn_devid = inode->s5_indirect_block;
+            break;
+        default: /* S5_TYPE_BLK */
+            vnode->vn_mode = S_IFBLK;
+            vnode->vn_devid = inode->s5_indirect_block;
+    }
 }
 
 /*
