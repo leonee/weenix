@@ -21,3 +21,6 @@ in s5_read_vnode()
     - so do we just not initialize the vn_ops and device
     if the vnode is a special file? Is this done in
     init_special_vnode for us?
+
+in s5_read/delete_vnode()
+    - should we dirty the inode?
