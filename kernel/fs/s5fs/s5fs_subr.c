@@ -117,7 +117,7 @@ s5_seek_to_block(vnode_t *vnode, off_t seekptr, int alloc)
                 return -ENOSPC;
             }
 
-            KASSERT(block_num == 0 && "forgot to handle an error case");
+            KASSERT(block_num > 0 && "forgot to handle an error case");
 
             inode->s5_direct_blocks[block_index] = block_num;
 
@@ -158,6 +158,9 @@ unlock_s5(s5fs_t *fs)
         kmutex_unlock(&fs->s5f_mutex);
 }
 
+static off_t max(off_t a, off_t b){
+    return (a >= b) ? a : b;
+}
 
 /*
  * Write len bytes to the given inode, starting at seek bytes from the
@@ -191,6 +194,10 @@ s5_write_file(vnode_t *vnode, off_t seek, const char *bytes, size_t len)
         len = S5_MAX_FILE_SIZE - seek;
     }
 
+    /* extend file size, if necessary */
+    vnode->vn_len = max(seek + len, vnode->vn_len);
+    VNODE_TO_S5INODE(vnode)->s5_size = vnode->vn_len;
+
     /* TODO zero out blocks between end of file and where we're writing */
 
     unsigned int srcpos = 0;
@@ -208,14 +215,14 @@ s5_write_file(vnode_t *vnode, off_t seek, const char *bytes, size_t len)
             return get_res;
         }
 
-        if (seek + PAGE_SIZE > len){
-            write_size = len - seek;
+        if (PAGE_SIZE - data_offset > len){
+            write_size = S5_DATA_OFFSET(len);
         } else {
             write_size = PAGE_SIZE - data_offset;
         }
 
+        KASSERT(write_size >= 0 && "write size is negative");
         memcpy((char *) p->pf_addr + data_offset, (void *) bytes, write_size);
-
         pframe_pin(p);
         pframe_dirty(p);
         pframe_unpin(p);
@@ -275,9 +282,9 @@ s5_read_file(struct vnode *vnode, off_t seek, char *dest, size_t len)
             dbg(DBG_S5FS, "error getting page\n");
             return get_res;
         }
-
-        if (seek + PAGE_SIZE > len){
-            read_size = len - seek;
+       
+        if (PAGE_SIZE - data_offset > len){
+            read_size = S5_DATA_OFFSET(len);
         } else {
             read_size = PAGE_SIZE - data_offset;
         }
@@ -534,6 +541,66 @@ s5_free_inode(vnode_t *vnode)
         s5_dirty_super(fs);
 }
 
+int min(int a, int b){
+    return (a <= b) ? a : b;
+}
+
+static int s5_find_dirent_helper(vnode_t *vnode, const char *name, size_t namelen,
+        off_t *offset, int *ino){
+    s5_dirent_t dirents[NDIRENTS];
+    size_t readsize = NDIRENTS * sizeof(s5_dirent_t);
+
+    off_t seek = 0;
+
+    while (seek < vnode->vn_len){
+        int readsize = min(vnode->vn_len - seek, NDIRENTS * sizeof(s5_dirent_t));
+        int dirents_read = readsize / sizeof(s5_dirent_t);
+
+        int read_res = s5_read_file(vnode, seek, (char *) dirents, readsize);
+
+        if (read_res < 0){
+            dbg(DBG_S5FS, "error getting dirents\n");
+            return read_res;
+        }
+        int i;
+        for (i = 0; i < dirents_read; i++){
+            if (name_match(dirents[i].s5d_name, name, namelen)){
+                if (offset != NULL){
+                    *offset = seek + (i * sizeof(s5_dirent_t));
+                }
+
+                if (ino != NULL){
+                    *ino = dirents[i].s5d_inode;
+                }
+
+                return 0;
+            }            
+        }
+        seek += read_res;
+    }
+
+    return -ENOENT;
+}
+
+/* returns the offset of the first empy dirent in vnode, or the length of the vnode
+ *  if none exists. This function May also return any error that s5_find_dirent_helper
+ *   returns. This function assumes that vnode is a directory.
+ */
+static int find_empty_dirent(vnode_t *vnode){
+    KASSERT(vnode->vn_ops->mkdir != NULL);
+    off_t offset;
+    int find_res = s5_find_dirent_helper(vnode, "", 0, &offset, NULL);
+
+    switch (find_res){
+        case 0:
+            return offset;
+        case -ENOENT:
+            return vnode->vn_len;
+        default:
+            return find_res;
+    }
+}
+
 /*
  * Locate the directory entry in the given inode with the given name,
  * and return its inode number. If there is no entry with the given
@@ -547,26 +614,15 @@ s5_free_inode(vnode_t *vnode)
 int
 s5_find_dirent(vnode_t *vnode, const char *name, size_t namelen)
 {
-    KASSERT(vnode->vn_ops->mkdir != NULL && "not a directory");
+    int ino;
+    int find_res = s5_find_dirent_helper(vnode, name, namelen, NULL, &ino);
 
-    s5_dirent_t dirents[NDIRENTS];
-    size_t readsize = NDIRENTS * sizeof(s5_dirent_t);
-
-    off_t seek = 0;
-
-    while (seek < vnode->vn_len){
-        s5_read_file(vnode, seek, (char *) dirents, sizeof(dirents) * NDIRENTS);
-
-        int i;
-        for (i = 0; i < NDIRENTS; i++){
-            if (name_match(dirents[i].s5d_name, name, namelen)){
-                return dirents[i].s5d_inode;
-            }            
-        }
+    if (find_res == 0){
+        return ino;
+    } else {
+        dbg(DBG_S5FS, "unable to locate directory\n");
+        return find_res;
     }
-
-    dbg(DBG_S5FS, "unable to locate directory\n");
-    return -ENOENT;
 }
 
 /*
@@ -620,20 +676,27 @@ s5_link(vnode_t *parent, vnode_t *child, const char *name, size_t namelen)
     memcpy(d.s5d_name, name, namelen);
     d.s5d_name[namelen] = '\0';
 
-    int res = s5_write_file(parent, parent->vn_len, (char *) &d, sizeof(s5_dirent_t));
+    int res = s5_write_file(parent, find_empty_dirent(parent), (char *) &d,
+            sizeof(s5_dirent_t));
+
+    if (res < 0){
+        dbg(DBG_S5FS, "error writing child entry in parent\n");
+        return res;
+    }
 
     s5_dirty_inode(VNODE_TO_S5FS(parent), VNODE_TO_S5INODE(parent));
 
-    dbg(DBG_S5FS, "incrementing link count on inode %d from %d to %d",
+    dbg(DBG_S5FS, "incrementing link count on inode %d from %d to %d\n",
             VNODE_TO_S5INODE(child)->s5_number, VNODE_TO_S5INODE(child)->s5_linkcount,
             VNODE_TO_S5INODE(child)->s5_linkcount + 1);
     
     VNODE_TO_S5INODE(child)->s5_linkcount++;
+    s5_dirty_inode(VNODE_TO_S5FS(child), VNODE_TO_S5INODE(child));
 
     KASSERT(VNODE_TO_S5INODE(child)->s5_linkcount == init_refcount + 1 &&
             "link count not incremented properly");
 
-    return res;
+    return 0;
 }
 
 /*

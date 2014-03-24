@@ -279,6 +279,9 @@ s5fs_delete_vnode(vnode_t *vnode)
 
     s5_inode_t *inode = ((s5_inode_t *) p->pf_addr) + S5_INODE_OFFSET(vnode->vn_vno);
 
+    dbg(DBG_S5FS, "decrementing link count on inode %d from %d to %d\n",
+            inode->s5_number, inode->s5_linkcount,inode->s5_linkcount - 1);
+
     inode->s5_linkcount--;
 
     if (inode->s5_linkcount == 0){
@@ -434,6 +437,7 @@ s5fs_create(vnode_t *dir, const char *name, size_t namelen, vnode_t **result)
 static int
 s5fs_mknod(vnode_t *dir, const char *name, size_t namelen, int mode, devid_t devid)
 {
+    panic("fuuuuuck\n");
         NOT_YET_IMPLEMENTED("S5FS: s5fs_mknod");
         return -1;
 }
@@ -515,7 +519,7 @@ static int
 s5fs_mkdir(vnode_t *dir, const char *name, size_t namelen)
 {
     /* create an array of 0's for a future assert */
-    static int ndirect_0s[S5_NDIRECT_BLOCKS] = {};
+    static uint32_t ndirect_0s[S5_NDIRECT_BLOCKS] = {};
 
     static const char *dotstring = ".";
     static const char *dotdotstring = "..";
@@ -534,11 +538,12 @@ s5fs_mkdir(vnode_t *dir, const char *name, size_t namelen)
     vnode_t *child = vget(fs, ino);
 
     KASSERT(child->vn_refcount == 1);
+    KASSERT(child->vn_len == 0);
     KASSERT(VNODE_TO_S5INODE(child)->s5_number == (unsigned) ino);
     KASSERT(VNODE_TO_S5INODE(child)->s5_type == S5_TYPE_DIR);
     KASSERT(VNODE_TO_S5INODE(child)->s5_linkcount == 1);
-    KASSERT(memcmp(VNODE_TO_S5INODE(child)->s5_direct_blocks, ndirect_0s,
-                S5_NDIRECT_BLOCKS * sizeof(int)));
+    KASSERT(!memcmp(VNODE_TO_S5INODE(child)->s5_direct_blocks, ndirect_0s,
+                S5_NDIRECT_BLOCKS * sizeof(uint32_t)));
     KASSERT(VNODE_TO_S5INODE(child)->s5_indirect_block == 0);
 
     int link_res = s5fs_link(child, child, dotstring, 1); 
@@ -574,8 +579,6 @@ s5fs_mkdir(vnode_t *dir, const char *name, size_t namelen)
     KASSERT(VNODE_TO_S5INODE(child)->s5_linkcount == 3);
 
     vput(child);
-
-    KASSERT(VNODE_TO_S5INODE(child)->s5_linkcount == 2);
 
     return 0;
 }
@@ -656,7 +659,7 @@ s5fs_fillpage(vnode_t *vnode, off_t offset, void *pagebuf)
         return bd->cd_ops->read(bd, 0, pagebuf, S5_BLOCK_SIZE);
     } else {
         blockdev_t *bd = ((s5fs_t *) vnode->vn_fs->fs_i)->s5f_bdev;
-        return bd->bd_ops->read_block(bd, (char *) pagebuf, blocknum, S5_BLOCK_SIZE);
+        return bd->bd_ops->read_block(bd, (char *) pagebuf, blocknum, 1/*S5_BLOCK_SIZE*/);
     }
 }
 
@@ -712,7 +715,7 @@ s5fs_cleanpage(vnode_t *vnode, off_t offset, void *pagebuf)
     KASSERT(blocknum > 0 && "forgot to handle an error case");
 
     blockdev_t *bd = ((s5fs_t *) vnode->vn_fs->fs_i)->s5f_bdev;
-    return bd->bd_ops->write_block(bd, (char *) pagebuf, blocknum, S5_BLOCK_SIZE);
+    return bd->bd_ops->write_block(bd, (char *) pagebuf, blocknum, 1/*S5_BLOCK_SIZE*/);
 }
 
 /* Diagnostic/Utility: */
