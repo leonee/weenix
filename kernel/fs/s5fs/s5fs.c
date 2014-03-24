@@ -442,6 +442,8 @@ s5fs_unlink(vnode_t *dir, const char *name, size_t namelen)
 static int
 s5fs_mkdir(vnode_t *dir, const char *name, size_t namelen)
 {
+    KASSERT(namelen < NAME_LEN);
+
         NOT_YET_IMPLEMENTED("S5FS: s5fs_mkdir");
         return -1;
 }
