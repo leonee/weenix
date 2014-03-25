@@ -586,12 +586,13 @@ int min(int a, int b){
 static int s5_find_dirent_helper(vnode_t *vnode, const char *name, size_t namelen,
         off_t *offset, int *ino){
     s5_dirent_t dirents[NDIRENTS];
-    size_t readsize = NDIRENTS * sizeof(s5_dirent_t);
 
     off_t seek = 0;
 
     while (seek < vnode->vn_len){
         int readsize = min(vnode->vn_len - seek, NDIRENTS * sizeof(s5_dirent_t));
+        KASSERT(readsize % sizeof(s5_dirent_t) == 0);
+
         int dirents_read = readsize / sizeof(s5_dirent_t);
 
         int read_res = s5_read_file(vnode, seek, (char *) dirents, readsize);
@@ -686,9 +687,48 @@ s5_find_dirent(vnode_t *vnode, const char *name, size_t namelen)
 int
 s5_remove_dirent(vnode_t *vnode, const char *name, size_t namelen)
 {
-    panic("nyi");
-        NOT_YET_IMPLEMENTED("S5FS: s5_remove_dirent");
-        return -1;
+    static unsigned int dirent_size = sizeof(s5_dirent_t);
+
+    KASSERT(vnode->vn_ops->mkdir != NULL);
+
+    off_t dir_offset;
+
+    int find_res = s5_find_dirent_helper(vnode, name, namelen, &dir_offset, NULL);
+
+    if (find_res == -ENOENT){
+        dbg(DBG_S5FS, "couldn't find specified dirent\n");
+        return -ENOENT;
+    }
+
+    KASSERT(find_res == 0 && "you missed an error case");
+    KASSERT((unsigned) vnode->vn_len >= dir_offset + dirent_size);
+
+    /* if the dirent to remove isn't the last dirent, we need to
+     * copy the last dirent into its place */
+    if ((unsigned) vnode->vn_len > dir_offset + dirent_size){
+        KASSERT((unsigned) vnode->vn_len >= dir_offset + (2 * dirent_size));
+
+        s5_dirent_t to_move;
+
+        int read_res = s5_read_file(vnode, vnode->vn_len - dirent_size,
+                (char *) &to_move, dirent_size);
+
+        if (read_res < 0){
+            dbg(DBG_S5FS, "error reading final dirent in directory\n");
+            return read_res;
+        }
+
+        int write_res = s5_write_file(vnode, dir_offset,
+                (char *) &to_move, dirent_size);
+
+        if (write_res < 0){
+            dbg(DBG_S5FS, "error overwriting dirent to remove with last dirent\n");
+        }
+    }
+
+    vnode->vn_len -= dirent_size;     
+
+    return 0;
 }
 
 /*

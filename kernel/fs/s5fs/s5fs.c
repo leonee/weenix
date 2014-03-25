@@ -562,6 +562,7 @@ static int
 s5fs_link(vnode_t *child, vnode_t *parent, const char *name, size_t namelen)
 {
     KASSERT(parent->vn_ops->mkdir != NULL);
+    KASSERT(child->vn_ops->mkdir == NULL);
     return s5_link(parent, child, name, namelen);
 }
 
@@ -608,6 +609,7 @@ s5fs_mkdir(vnode_t *dir, const char *name, size_t namelen)
     vnode_t *child;
 
     KASSERT(namelen < NAME_LEN);
+    KASSERT(dir->vn_ops->mkdir != NULL);
     KASSERT(s5fs_lookup(dir, name, namelen, &child) != 0);
 
     fs_t *fs = VNODE_TO_S5FS(dir)->s5f_fs;
