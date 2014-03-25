@@ -691,9 +691,11 @@ s5_remove_dirent(vnode_t *vnode, const char *name, size_t namelen)
 
     KASSERT(vnode->vn_ops->mkdir != NULL);
 
+    int deleted_ino;
     off_t dir_offset;
 
-    int find_res = s5_find_dirent_helper(vnode, name, namelen, &dir_offset, NULL);
+    int find_res = 
+        s5_find_dirent_helper(vnode, name, namelen, &dir_offset, &deleted_ino);
 
     if (find_res == -ENOENT){
         dbg(DBG_S5FS, "couldn't find specified dirent\n");
@@ -726,7 +728,27 @@ s5_remove_dirent(vnode_t *vnode, const char *name, size_t namelen)
         }
     }
 
+    s5fs_t *fs = VNODE_TO_S5FS(vnode);
+
+    /* decrease the length of the directory file */
+    s5_inode_t *dir_inode = VNODE_TO_S5INODE(vnode);
+
     vnode->vn_len -= dirent_size;     
+
+    dir_inode->s5_size -= dirent_size;
+    s5_dirty_inode(fs, dir_inode);
+
+    /* decrement the linkcount on the unlinked file */
+    vnode_t *deleted_vnode = vget(fs->s5f_fs, deleted_ino);
+    s5_inode_t *deleted_inode = VNODE_TO_S5INODE(deleted_vnode);
+
+    deleted_inode->s5_linkcount--;
+
+    KASSERT(deleted_inode->s5_linkcount >= 0 && "linkcount went below 0!");
+
+    s5_dirty_inode(fs, deleted_ino);
+
+    vput(deleted_vnode);
 
     return 0;
 }
