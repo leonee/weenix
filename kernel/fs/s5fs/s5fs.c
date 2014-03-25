@@ -633,7 +633,7 @@ s5fs_mkdir(vnode_t *dir, const char *name, size_t namelen)
         return link_res;
     }
 
-    KASSERT(VNODE_TO_S5INODE(child)->s5_linkcount == 2);
+    KASSERT(VNODE_TO_S5INODE(child)->s5_linkcount == 1);
 
     link_res = s5fs_link(dir, child, dotdotstring, 2);
 
@@ -653,11 +653,11 @@ s5fs_mkdir(vnode_t *dir, const char *name, size_t namelen)
         return link_res;
     }
 
-    KASSERT(VNODE_TO_S5INODE(child)->s5_linkcount == 3);
+    KASSERT(VNODE_TO_S5INODE(child)->s5_linkcount == 2);
 
     vput(child);
 
-    /*KASSERT(child->vn_refcount == 0);*/
+    KASSERT(child->vn_refcount - child->vn_nrespages == 0);
 
     return 0;
 }

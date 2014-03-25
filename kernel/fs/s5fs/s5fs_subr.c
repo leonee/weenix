@@ -693,15 +693,17 @@ s5_link(vnode_t *parent, vnode_t *child, const char *name, size_t namelen)
 
     s5_dirty_inode(VNODE_TO_S5FS(parent), VNODE_TO_S5INODE(parent));
 
-    dbg(DBG_S5FS, "incrementing link count on inode %d from %d to %d\n",
+    if (parent != child){
+        dbg(DBG_S5FS, "incrementing link count on inode %d from %d to %d\n",
             VNODE_TO_S5INODE(child)->s5_number, VNODE_TO_S5INODE(child)->s5_linkcount,
             VNODE_TO_S5INODE(child)->s5_linkcount + 1);
-    
-    VNODE_TO_S5INODE(child)->s5_linkcount++;
-    s5_dirty_inode(VNODE_TO_S5FS(child), VNODE_TO_S5INODE(child));
 
-    KASSERT(VNODE_TO_S5INODE(child)->s5_linkcount == init_refcount + 1 &&
-            "link count not incremented properly");
+        VNODE_TO_S5INODE(child)->s5_linkcount++;
+        s5_dirty_inode(VNODE_TO_S5FS(child), VNODE_TO_S5INODE(child));
+
+        KASSERT(VNODE_TO_S5INODE(child)->s5_linkcount == init_refcount + 1 &&
+                "link count not incremented properly");
+    }
 
     return 0;
 }
