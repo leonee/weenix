@@ -412,17 +412,18 @@ s5fs_mmap(vnode_t *file, vmarea_t *vma, mmobj_t **ret)
 
 /* checks the state of a new vnode, created with a call to vget
  * with ino as the second argument */
-static void assert_new_vnode_state(vnode_t *v, int ino){
+static void assert_new_vnode_state(vnode_t *v, int ino, int mode, uint32_t devid){
     static uint32_t ndirect_0s[S5_NDIRECT_BLOCKS] = {};
 
     KASSERT(v->vn_refcount == 1);
     KASSERT(v->vn_len == 0);
     KASSERT(VNODE_TO_S5INODE(v)->s5_number == (unsigned) ino);
-    KASSERT(VNODE_TO_S5INODE(v)->s5_type == S5_TYPE_DIR);
+    KASSERT(VNODE_TO_S5INODE(v)->s5_type == mode);
     KASSERT(VNODE_TO_S5INODE(v)->s5_linkcount == 1);
     KASSERT(!memcmp(VNODE_TO_S5INODE(v)->s5_direct_blocks, ndirect_0s,
                 S5_NDIRECT_BLOCKS * sizeof(uint32_t)));
-    KASSERT(VNODE_TO_S5INODE(v)->s5_indirect_block == 0);
+
+    KASSERT(VNODE_TO_S5INODE(v)->s5_indirect_block == devid);
 
 }
 
@@ -439,19 +440,22 @@ s5fs_create(vnode_t *dir, const char *name, size_t namelen, vnode_t **result)
 {
     KASSERT(namelen < NAME_LEN);
 
-    s5fs_t *s5fs = VNODE_TO_S5FS(dir);
-    fs_t *fs = s5fs->s5f_fs;
+    vnode_t *child;
 
-    int ino = s5_alloc_inode(fs, S5_TYPE_DIR, s5fs->s5f_bdev->bd_id);
+    KASSERT(s5fs_lookup(dir, name, namelen, &child) != 0);
+
+    fs_t *fs = VNODE_TO_S5FS(dir)->s5f_fs;
+
+    int ino = s5_alloc_inode(fs, S5_TYPE_DATA, NULL);
 
     if (ino < 0){
         dbg(DBG_S5FS, "unable to alloc a new inode\n");
     }
 
-    vnode_t *child = vget(fs, ino);
+    child = vget(fs, ino);
 
     /* make sure the state of the new vnode is correct */
-    assert_new_vnode_state(child, ino);
+    assert_new_vnode_state(child, ino, S5_TYPE_DATA, 0);
     
     int link_res = s5fs_link(child, dir, name, namelen);
 
@@ -482,9 +486,45 @@ s5fs_create(vnode_t *dir, const char *name, size_t namelen, vnode_t **result)
 static int
 s5fs_mknod(vnode_t *dir, const char *name, size_t namelen, int mode, devid_t devid)
 {
-    panic("fuuuuuck\n");
-        NOT_YET_IMPLEMENTED("S5FS: s5fs_mknod");
-        return -1;
+    KASSERT(namelen < NAME_LEN);
+
+    vnode_t *child;
+
+    KASSERT(s5fs_lookup(dir, name, namelen, &child) != 0);
+
+    fs_t *fs = VNODE_TO_S5FS(dir)->s5f_fs;
+
+    int ino;
+
+    if (S_ISCHR(mode)){
+        ino = s5_alloc_inode(fs, S5_TYPE_CHR, devid);
+    } else if (S_ISBLK(mode)){
+        ino = s5_alloc_inode(fs, S5_TYPE_BLK, devid);
+    } else {
+        panic("invalid mode");
+    }
+    
+    child = vget(fs, ino);
+
+    /* make sure the state of the new vnode is correct */
+    assert_new_vnode_state(child, ino, S_ISCHR(mode) ? S5_TYPE_CHR : S5_TYPE_BLK,
+            devid);
+    
+    int link_res = s5fs_link(child, dir, name, namelen);
+
+    if (link_res < 0){
+        dbg(DBG_S5FS, "error creating entry for new directory in parent dir\n");
+        vput(child);
+        s5_free_inode(child);
+        return link_res;
+    }
+
+    vput(child);
+
+    KASSERT(child->vn_refcount == 0);
+    KASSERT(VNODE_TO_S5INODE(child)->s5_linkcount == 1);
+
+    return 0;
 }
 
 /*
@@ -566,21 +606,23 @@ s5fs_mkdir(vnode_t *dir, const char *name, size_t namelen)
     static const char *dotstring = ".";
     static const char *dotdotstring = "..";
 
+    vnode_t *child;
+
     KASSERT(namelen < NAME_LEN);
+    KASSERT(s5fs_lookup(dir, name, namelen, &child) != 0);
 
-    s5fs_t *s5fs = VNODE_TO_S5FS(dir);
-    fs_t *fs = s5fs->s5f_fs;
+    fs_t *fs = VNODE_TO_S5FS(dir)->s5f_fs;
 
-    int ino = s5_alloc_inode(fs, S5_TYPE_DIR, s5fs->s5f_bdev->bd_id);
+    int ino = s5_alloc_inode(fs, S5_TYPE_DIR, NULL);
 
     if (ino < 0){
         dbg(DBG_S5FS, "unable to alloc a new inode\n");
     }
 
-    vnode_t *child = vget(fs, ino);
+    child = vget(fs, ino);
 
     /* make sure the state of the new vnode is correct */
-    assert_new_vnode_state(child, ino);
+    assert_new_vnode_state(child, ino, S5_TYPE_DIR, 0);
 
     int link_res = s5fs_link(child, child, dotstring, 1); 
 
@@ -616,7 +658,7 @@ s5fs_mkdir(vnode_t *dir, const char *name, size_t namelen)
 
     vput(child);
 
-    KASSERT(child->vn_refcount == 0);
+    /*KASSERT(child->vn_refcount == 0);*/
 
     return 0;
 }
