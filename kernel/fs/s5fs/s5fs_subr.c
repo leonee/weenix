@@ -208,7 +208,7 @@ s5_write_file(vnode_t *vnode, off_t seek, const char *bytes, size_t len)
     while (srcpos < len){
         int data_offset = S5_DATA_OFFSET(seek);
 
-        get_res = pframe_get(&vnode->vn_mmobj, seek, &p);
+        get_res = pframe_get(&vnode->vn_mmobj, S5_DATA_BLOCK(seek), &p);
 
         if (get_res < 0){
             dbg(DBG_S5FS, "error getting page\n");
@@ -276,7 +276,7 @@ s5_read_file(struct vnode *vnode, off_t seek, char *dest, size_t len)
     while (destpos < len){
         int data_offset = S5_DATA_OFFSET(seek);
 
-        get_res = pframe_get(&vnode->vn_mmobj, seek, &p);
+        get_res = pframe_get(&vnode->vn_mmobj, S5_DATA_BLOCK(seek), &p);
 
         if (get_res < 0){
             dbg(DBG_S5FS, "error getting page\n");
@@ -676,7 +676,13 @@ s5_link(vnode_t *parent, vnode_t *child, const char *name, size_t namelen)
     memcpy(d.s5d_name, name, namelen);
     d.s5d_name[namelen] = '\0';
 
-    int res = s5_write_file(parent, find_empty_dirent(parent), (char *) &d,
+    off_t write_offset = find_empty_dirent(parent);
+
+    if (write_offset < 0){
+        dbg(DBG_S5FS, "error finding dirent to write to\n");
+    }
+
+    int res = s5_write_file(parent, write_offset, (char *) &d,
             sizeof(s5_dirent_t));
 
     if (res < 0){
