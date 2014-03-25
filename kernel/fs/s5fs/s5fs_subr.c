@@ -746,7 +746,7 @@ s5_remove_dirent(vnode_t *vnode, const char *name, size_t namelen)
 
     KASSERT(deleted_inode->s5_linkcount >= 0 && "linkcount went below 0!");
 
-    s5_dirty_inode(fs, deleted_ino);
+    s5_dirty_inode(fs, deleted_inode);
 
     vput(deleted_vnode);
 
