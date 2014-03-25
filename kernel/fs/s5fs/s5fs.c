@@ -689,8 +689,32 @@ s5fs_rmdir(vnode_t *parent, const char *name, size_t namelen)
  */
 static int s5fs_readdir(vnode_t *vnode, off_t offset, struct dirent *d)
 {
-        NOT_YET_IMPLEMENTED("S5FS: s5fs_readdir");
-        return -1;
+    static int s5_dirent_size = sizeof(s5_dirent_t);
+
+    KASSERT(vnode != NULL);
+    KASSERT(d != NULL);
+    KASSERT(offset <= vnode->vn_len);
+
+    if (offset == vnode->vn_len){
+        return 0;
+    }    
+
+    s5_dirent_t s5d;
+
+    int read_res = s5_read_file(vnode, offset, (char *) &s5d, s5_dirent_size);
+
+    KASSERT(read_res <= s5_dirent_size && "read too much!");
+
+    if (read_res == s5_dirent_size){
+        d->d_ino = s5d.s5d_inode;
+        d->d_off = offset + s5_dirent_size;
+        strcpy(d->d_name, s5d.s5d_name);
+    } else {
+        KASSERT(read_res < 0 && "bad offset or incomplete read");
+        dbg(DBG_S5FS, "error reading dirent from file\n");
+    }
+
+    return read_res;
 }
 
 
