@@ -758,8 +758,39 @@ s5_link(vnode_t *parent, vnode_t *child, const char *name, size_t namelen)
 int
 s5_inode_blocks(vnode_t *vnode)
 {
-    panic("nyi");
-        NOT_YET_IMPLEMENTED("S5FS: s5_inode_blocks");
-        return -1;
+    s5_inode_t *inode = VNODE_TO_S5INODE(vnode);
+    int allocated_blocks;
+
+    int i;
+    for (i = 0; i < S5_NDIRECT_BLOCKS; i++){
+        if (inode->s5_direct_blocks[i] != 0){
+            allocated_blocks++;
+        }
+    }
+
+    if (inode->s5_indirect_block == 0){
+        return allocated_blocks;
+    }
+
+    /* count the indirect block as an allocated block */
+    allocated_blocks++;
+
+    pframe_t *p;
+    mmobj_t *mmobj = S5FS_TO_VMOBJ(VNODE_TO_S5FS(vnode));
+
+    int get_res = pframe_get(mmobj, inode->s5_indirect_block, &p);
+
+    if (get_res < 0){
+        return get_res;
+    }
+
+    int j;
+    for (j = 0; j < S5_NDIRECT_BLOCKS; j++){
+        if (((int *)p->pf_addr)[j] != 0){
+            allocated_blocks++;
+        }
+    }
+
+    return allocated_blocks;
 }
 
