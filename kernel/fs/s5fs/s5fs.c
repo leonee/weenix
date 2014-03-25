@@ -577,9 +577,8 @@ s5fs_link(vnode_t *child, vnode_t *parent, const char *name, size_t namelen)
 static int
 s5fs_unlink(vnode_t *dir, const char *name, size_t namelen)
 {
-    panic("nyi");
-        NOT_YET_IMPLEMENTED("S5FS: s5fs_unlink");
-        return -1;
+    KASSERT(dir->vn_ops->mkdir != NULL);
+    return s5_remove_dirent(dir, name, namelen);
 }
 
 /*
