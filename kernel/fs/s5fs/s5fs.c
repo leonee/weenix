@@ -539,7 +539,7 @@ s5fs_lookup(vnode_t *base, const char *name, size_t namelen, vnode_t **result)
         return -ENOENT;
     }
 
-    KASSERT(ino > 0 && "forgot an error case\n");
+    KASSERT(ino >= 0 && "forgot an error case\n");
 
     vnode_t *child = vget(VNODE_TO_S5FS(base)->s5f_fs, ino);
 
@@ -931,5 +931,6 @@ s5fs_check_refcounts(fs_t *fs)
             (ret ? "UNSUCCESSFULLY" : "successfully"));
 
         kfree(refcounts);
+        KASSERT(!ret && "Refcounts of s5fs filesystem are bad!!!");
         return ret;
 }

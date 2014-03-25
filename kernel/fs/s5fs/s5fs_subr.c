@@ -45,6 +45,46 @@
 static void s5_free_block(s5fs_t *fs, int block);
 static int s5_alloc_block(s5fs_t *);
 
+/* allocated an indirect block for a vnode who's indirect block is currently sparse */
+static int alloc_indirect_block(vnode_t *v){
+
+    /* an array of 0's that we'll use to quickly create blocks of zeros */
+    static int zero_array[BLOCK_SIZE] = {};
+
+    s5_inode_t *inode = VNODE_TO_S5INODE(v);
+
+    KASSERT(inode->s5_indirect_block == 0);
+
+    /* first, get an indirect block */
+    int indirect_block = s5_alloc_block(VNODE_TO_S5FS(v));
+
+    if (indirect_block == -ENOSPC){
+        dbg(DBG_S5FS, "couldn't alloc a new block\n");
+        return -ENOSPC;
+    }
+
+    KASSERT(indirect_block > 0 && "forgot to handle an error case");
+
+    /* then, zero it */
+    pframe_t *ind_page;
+    mmobj_t *mmo = S5FS_TO_VMOBJ(VNODE_TO_S5FS(v));
+
+    int get_res = pframe_get(mmo, indirect_block, &ind_page);
+
+    if (get_res < 0){
+        return get_res;
+    }
+
+    memcpy(ind_page->pf_addr, zero_array, BLOCK_SIZE);
+
+    pframe_dirty(ind_page);
+
+    /* finally, set this block to be the indirect block of the inode */
+    inode->s5_indirect_block = indirect_block;
+    s5_dirty_inode(VNODE_TO_S5FS(v), inode);
+
+    return 0;
+}
 
 /*
  * Return the disk-block number for the given seek pointer (aka file
@@ -79,6 +119,18 @@ s5_seek_to_block(vnode_t *vnode, off_t seekptr, int alloc)
         pframe_t *ind_page;
 
         mmobj_t *mmo = S5FS_TO_VMOBJ(VNODE_TO_S5FS(vnode));
+
+        if (inode->s5_indirect_block == 0){
+            if (!alloc){
+                return 0;
+            }
+
+            int alloc_res = alloc_indirect_block(vnode);
+            if (alloc_res < 0){
+                dbg(DBG_S5FS, "error allocating indirect block\n");
+                return alloc_res;
+            }
+        }
 
         if (pframe_get(mmo, inode->s5_indirect_block, &ind_page) < 0){
             panic("an indirect block is messed up\n");
@@ -120,19 +172,7 @@ s5_seek_to_block(vnode_t *vnode, off_t seekptr, int alloc)
             KASSERT(block_num > 0 && "forgot to handle an error case");
 
             inode->s5_direct_blocks[block_index] = block_num;
-
-            uint32_t inode_block = S5_INODE_BLOCK(inode->s5_number);
-            
-            pframe_t *inode_page;
-            mmobj_t *mmo = S5FS_TO_VMOBJ(VNODE_TO_S5FS(vnode));
-
-            if (pframe_get(mmo, inode_block, &inode_page) < 0){
-                panic("an indirect block is messed up\n");
-            }
-
-            pframe_pin(inode_page);
-            pframe_dirty(inode_page);
-            pframe_unpin(inode_page);
+            s5_dirty_inode(VNODE_TO_S5FS(vnode), inode);
         }
     }
 
@@ -197,8 +237,6 @@ s5_write_file(vnode_t *vnode, off_t seek, const char *bytes, size_t len)
     /* extend file size, if necessary */
     vnode->vn_len = max(seek + len, vnode->vn_len);
     VNODE_TO_S5INODE(vnode)->s5_size = vnode->vn_len;
-
-    /* TODO zero out blocks between end of file and where we're writing */
 
     unsigned int srcpos = 0;
     int get_res;
