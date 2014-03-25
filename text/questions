@@ -22,6 +22,9 @@ in s5_read_vnode()
 in s5_read/delete_vnode()
     - should we dirty the inode?
 
+in s5fs_stat()
+    - do we just assign vnode->vn_mode directly?
+
 In general:
     - Should the pageoutdaemon have a cwd? If so,
     what should it be, and how should we set it?

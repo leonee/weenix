@@ -732,9 +732,22 @@ static int s5fs_readdir(vnode_t *vnode, off_t offset, struct dirent *d)
 static int
 s5fs_stat(vnode_t *vnode, struct stat *ss)
 {
-    panic("nyi");
-        NOT_YET_IMPLEMENTED("S5FS: s5fs_stat");
-        return -1;
+    int allocated_blocks = s5_inode_blocks(vnode);
+    s5_inode_t *inode = VNODE_TO_S5INODE(vnode);
+
+    if (allocated_blocks < 0){
+        dbg(DBG_S5FS, "error calculating number of allocated blocks\n");
+        return allocated_blocks;
+    }
+
+    ss->st_mode =vnode->vn_mode;
+    ss->st_ino = inode->s5_number;
+    ss->st_nlink = inode->s5_linkcount;
+    ss->st_size = vnode->vn_len;
+    ss->st_blksize = BLOCK_SIZE;
+    ss->st_blocks = allocated_blocks;
+
+    return 0;
 }
 
 
