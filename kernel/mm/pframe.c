@@ -314,19 +314,16 @@ pframe_get(struct mmobj *o, uint32_t pagenum, pframe_t **result)
             return fill_res;
         }
 
-        /* TODO figure out how to check if pageoutdaemon needs to be called */
+        if (pageoutd_needed()){
+            pageoutd_wakeup();
+        }
+
     } else {
        KASSERT(!pframe_is_free(*result) && "residant page marked as free?!?!?!\n");
 
-       if (pframe_is_busy(*result)){
+       while (pframe_is_busy(*result)){
            sched_sleep_on(&(*result)->pf_waitq);
        } 
-
-       if (pframe_is_free(*result)){
-           *result = NULL;
-           /* TODO figure out what error to return */
-           return -1;
-       }
     }
 
     KASSERT(!pframe_is_busy(*result) && "trying to return a busy pframe. NO!!!\n");

@@ -648,6 +648,7 @@ s5_find_dirent(vnode_t *vnode, const char *name, size_t namelen)
 int
 s5_remove_dirent(vnode_t *vnode, const char *name, size_t namelen)
 {
+    panic("nyi");
         NOT_YET_IMPLEMENTED("S5FS: s5_remove_dirent");
         return -1;
 }
@@ -717,6 +718,7 @@ s5_link(vnode_t *parent, vnode_t *child, const char *name, size_t namelen)
 int
 s5_inode_blocks(vnode_t *vnode)
 {
+    panic("nyi");
         NOT_YET_IMPLEMENTED("S5FS: s5_inode_blocks");
         return -1;
 }

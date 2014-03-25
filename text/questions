@@ -1,7 +1,3 @@
-in pframe_get()
-    - how do we see if we need to call the pageoutdaemon?
-    - what error to return if pframe got freed?
-
 in s5_seek_to_block()
     - what to do if seekptr is great than file length
       and we're not allocating?
@@ -25,3 +21,7 @@ in s5_read_vnode()
 
 in s5_read/delete_vnode()
     - should we dirty the inode?
+
+In general:
+    - Should the pageoutdaemon have a cwd? If so,
+    what should it be, and how should we set it?
