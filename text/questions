@@ -16,6 +16,7 @@ in s5_link()
 
 in s5fs_mkdir()
     - should we vput the child vnode?
+    - what should the refcounts on the vnode and inode be?
 
 in s5_read_vnode()
     - so do we just not initialize the vn_ops and device

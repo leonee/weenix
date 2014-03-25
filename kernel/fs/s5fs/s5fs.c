@@ -384,16 +384,14 @@ s5fs_umount(fs_t *fs)
 static int
 s5fs_read(vnode_t *vnode, off_t offset, void *buf, size_t len)
 {
-        NOT_YET_IMPLEMENTED("S5FS: s5fs_read");
-        return -1;
+    return s5_read_file(vnode, offset, buf, len);
 }
 
 /* Simply call s5_write_file. */
 static int
 s5fs_write(vnode_t *vnode, off_t offset, const void *buf, size_t len)
 {
-        NOT_YET_IMPLEMENTED("S5FS: s5fs_write");
-        return -1;
+    return s5_write_file(vnode, offset, buf, len);
 }
 
 /* This function is deceptivly simple, just return the vnode's
