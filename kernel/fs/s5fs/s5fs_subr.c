@@ -392,7 +392,7 @@ s5_alloc_block(s5fs_t *fs)
 
         s->s5s_nfree = S5_NBLKS_PER_FNODE - 1;
     } else {
-        free_block_num = s->s5s_free_blocks[s->s5s_nfree--];
+        free_block_num = s->s5s_free_blocks[--s->s5s_nfree];
     }
 
     s5_dirty_super(fs);

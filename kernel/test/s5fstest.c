@@ -88,9 +88,14 @@ static void run_indirect_test(){
     dbg(DBG_TEST, "indirect block tests passed\n"); 
 }
 
+static void test_max_inodes(){
+
+}
+
 
 void run_s5fs_tests(){
     run_indirect_test();
+    test_max_inodes();
 
     dbg(DBG_TESTPASS, "All s5fs tests passed!\n");
 }
