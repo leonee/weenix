@@ -685,7 +685,7 @@ s5fs_rmdir(vnode_t *parent, const char *name, size_t namelen)
     /* we check in do_rmdir to make sure the directory exists */
     KASSERT(ino != -ENOENT);
 
-    if (ino != 0){
+    if (ino < 0){
         dbg(DBG_S5FS, "error finding child dir to delete\n");
         return ino;
     }
