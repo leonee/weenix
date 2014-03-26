@@ -25,6 +25,10 @@ in s5_read/delete_vnode()
 in s5fs_stat()
     - do we just assign vnode->vn_mode directly?
 
+in s5fs_rmdir()
+    - do I not need to manually decrement the linkcount 
+    on the parent and call s5_dirty_inode?
+
 In general:
     - Should the pageoutdaemon have a cwd? If so,
     what should it be, and how should we set it?

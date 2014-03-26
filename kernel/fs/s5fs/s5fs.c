@@ -676,9 +676,45 @@ s5fs_mkdir(vnode_t *dir, const char *name, size_t namelen)
 static int
 s5fs_rmdir(vnode_t *parent, const char *name, size_t namelen)
 {
-    panic("nyi");
-        NOT_YET_IMPLEMENTED("S5FS: s5fs_rmdir");
-        return -1;
+    KASSERT(!(namelen == 1 && name[0] == '.'));
+    KASSERT(!(namelen == 2 && name[0] == '.' && name[1] == '.'));
+    KASSERT(parent->vn_ops->rmdir != NULL);
+
+    int ino = s5_find_dirent(parent, name, namelen);
+
+    /* we check in do_rmdir to make sure the directory exists */
+    KASSERT(ino != -ENOENT);
+
+    if (ino != 0){
+        dbg(DBG_S5FS, "error finding child dir to delete\n");
+        return ino;
+    }
+
+    vnode_t *child = vget(VNODE_TO_S5FS(parent)->s5f_fs, ino);
+
+    int dot_lookup_res = s5_find_dirent(child, ".", 1);
+    int dotdot_lookup_res = s5_find_dirent(child, "..", 2);
+
+    KASSERT(dot_lookup_res != -ENOENT && dotdot_lookup_res != -ENOENT);
+
+    if (dot_lookup_res < 0 || dotdot_lookup_res < 0){
+        dbg(DBG_S5FS, "error reading dirents of directory to delete\n");
+        return (dot_lookup_res < 0) ? dot_lookup_res : dotdot_lookup_res;
+    }
+
+    KASSERT((unsigned) child->vn_len >= 2 * sizeof(s5_dirent_t));
+
+    if ((unsigned) child->vn_len > 2 * sizeof(s5_dirent_t)){
+        vput(child);
+        return -ENOTEMPTY;
+    }
+
+    vput(child);
+
+    VNODE_TO_S5INODE(parent)->s5_linkcount--;
+    s5_dirty_inode(VNODE_TO_S5FS(parent), VNODE_TO_S5INODE(parent));
+
+    return s5_remove_dirent(parent, name, namelen);
 }
 
 
