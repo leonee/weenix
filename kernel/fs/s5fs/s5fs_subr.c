@@ -298,6 +298,8 @@ s5_read_file(struct vnode *vnode, off_t seek, char *dest, size_t len)
     if (seek < 0){
         dbg(DBG_S5FS, "invalid seek value\n");
         return -EINVAL;
+    } else if (seek >= vnode->vn_len){
+        return 0;
     }
 
     if (seek + len > (unsigned) vnode->vn_len){
@@ -334,6 +336,7 @@ s5_read_file(struct vnode *vnode, off_t seek, char *dest, size_t len)
     }
 
     return destpos;
+    /*return (seek < vnode->vn_len) ? destpos : 0;*/
 }
 
 /*
