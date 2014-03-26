@@ -768,7 +768,7 @@ int
 s5_link(vnode_t *parent, vnode_t *child, const char *name, size_t namelen)
 {
     KASSERT(parent->vn_ops->mkdir != NULL);
-    KASSERT(s5_find_dirent(parent, name, namelen) == -ENOENT && "file exists\n");
+    KASSERT(s5_find_dirent(parent, name, namelen) < 0 && "file exists\n");
 
     int init_refcount = VNODE_TO_S5INODE(child)->s5_linkcount;
 

@@ -624,7 +624,7 @@ s5fs_mkdir(vnode_t *dir, const char *name, size_t namelen)
     /* make sure the state of the new vnode is correct */
     assert_new_vnode_state(child, ino, S5_TYPE_DIR, 0);
 
-    int link_res = s5fs_link(child, child, dotstring, 1); 
+    int link_res = s5_link(child, child, dotstring, 1); 
 
     if (link_res < 0){
         dbg(DBG_S5FS, "error creating entry for \'.\' in new directory\n");
@@ -636,7 +636,7 @@ s5fs_mkdir(vnode_t *dir, const char *name, size_t namelen)
 
     KASSERT(VNODE_TO_S5INODE(child)->s5_linkcount == 1);
 
-    link_res = s5fs_link(dir, child, dotdotstring, 2);
+    link_res = s5_link(child, dir, dotdotstring, 2);
 
     if (link_res < 0){
         dbg(DBG_S5FS, "error creating entry for \'..\' in new directory\n");
@@ -645,7 +645,7 @@ s5fs_mkdir(vnode_t *dir, const char *name, size_t namelen)
         return link_res;
     }
 
-    link_res = s5fs_link(child, dir, name, namelen);
+    link_res = s5_link(dir, child, name, namelen);
 
     if (link_res < 0){
         dbg(DBG_S5FS, "error creating entry for new directory in parent dir\n");
