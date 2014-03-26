@@ -359,6 +359,9 @@ s5_read_file(struct vnode *vnode, off_t seek, char *dest, size_t len)
 static int
 s5_alloc_block(s5fs_t *fs)
 {
+    /* used to zero out allocated block */
+    static char zeros[BLOCK_SIZE] = {};
+
     s5_super_t *s = fs->s5f_super;
 
     lock_s5(fs);
@@ -398,6 +401,7 @@ s5_alloc_block(s5fs_t *fs)
     s5_dirty_super(fs);
 
     unlock_s5(fs);
+
     return free_block_num;
 }
 
