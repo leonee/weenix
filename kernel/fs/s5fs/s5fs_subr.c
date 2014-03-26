@@ -390,7 +390,7 @@ s5_alloc_block(s5fs_t *fs)
         memcpy((void *)(s->s5s_free_blocks), next_free_blocks->pf_addr, 
                 S5_NBLKS_PER_FNODE * sizeof(int));
 
-        s->s5s_nfree = S5_NBLKS_PER_FNODE;
+        s->s5s_nfree = S5_NBLKS_PER_FNODE - 1;
     } else {
         free_block_num = s->s5s_free_blocks[s->s5s_nfree--];
     }
