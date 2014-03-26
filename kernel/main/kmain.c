@@ -48,6 +48,7 @@
 #include "test/ttytest.h"
 #include "test/atatest.h"
 #include "test/memdevtest.h"
+#include "test/s5fstest.h"
 
 #include "test/kshell/kshell.h"
 #include "../test/kshell/priv.h"
@@ -329,6 +330,7 @@ initproc_run(int arg1, void *arg2)
     run_tty_tests();
     run_memdev_tests();
     /*run_ata_tests();*/
+    run_s5fs_tests();
 
     vfstest_main(1, NULL);
     
