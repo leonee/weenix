@@ -821,7 +821,7 @@ int
 s5_inode_blocks(vnode_t *vnode)
 {
     s5_inode_t *inode = VNODE_TO_S5INODE(vnode);
-    int allocated_blocks;
+    int allocated_blocks = 0;
 
     int i;
     for (i = 0; i < S5_NDIRECT_BLOCKS; i++){
