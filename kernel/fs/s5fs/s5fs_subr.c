@@ -202,6 +202,10 @@ static off_t max(off_t a, off_t b){
     return (a >= b) ? a : b;
 }
 
+static off_t min(off_t a, off_t b){
+    return (a <= b) ? a : b;
+}
+
 /*
  * Write len bytes to the given inode, starting at seek bytes from the
  * beginning of the inode. On success, return the number of bytes
@@ -302,18 +306,15 @@ s5_read_file(struct vnode *vnode, off_t seek, char *dest, size_t len)
         return 0;
     }
 
-    if (seek + len > (unsigned) vnode->vn_len){
-        len = vnode->vn_len - seek;
-    }
-
-    KASSERT(len > 0);
+    off_t start_pos = seek;
+    off_t end_pos = min(seek + len, vnode->vn_len);
             
-    unsigned int destpos = 0;
+    off_t destpos = 0;
     int get_res;
     int read_size;     
     pframe_t *p;
 
-    while (destpos < len){
+    while (start_pos + destpos < end_pos){
         int data_offset = S5_DATA_OFFSET(seek);
 
         get_res = pframe_get(&vnode->vn_mmobj, S5_DATA_BLOCK(seek), &p);
@@ -323,11 +324,7 @@ s5_read_file(struct vnode *vnode, off_t seek, char *dest, size_t len)
             return get_res;
         }
        
-        if (PAGE_SIZE - data_offset > len){
-            read_size = S5_DATA_OFFSET(len);
-        } else {
-            read_size = PAGE_SIZE - data_offset;
-        }
+        read_size = min(PAGE_SIZE - data_offset, end_pos - seek);
 
         memcpy((void *) dest, (char *) p->pf_addr + data_offset, read_size);
 
@@ -336,7 +333,6 @@ s5_read_file(struct vnode *vnode, off_t seek, char *dest, size_t len)
     }
 
     return destpos;
-    /*return (seek < vnode->vn_len) ? destpos : 0;*/
 }
 
 /*
@@ -583,10 +579,6 @@ s5_free_inode(vnode_t *vnode)
         s5_dirty_super(fs);
 }
 
-int min(int a, int b){
-    return (a <= b) ? a : b;
-}
-
 static int s5_find_dirent_helper(vnode_t *vnode, const char *name, size_t namelen,
         off_t *offset, int *ino){
     s5_dirent_t dirents[NDIRENTS];
@@ -596,6 +588,8 @@ static int s5_find_dirent_helper(vnode_t *vnode, const char *name, size_t namele
     while (seek < vnode->vn_len){
         int read_res = s5_read_file(vnode, seek, (char *) dirents, 
                 NDIRENTS * sizeof(s5_dirent_t)); 
+
+        KASSERT(seek + read_res <= vnode->vn_len);
 
         if (read_res < 0){
             dbg(DBG_S5FS, "error getting dirents\n");
@@ -622,25 +616,6 @@ static int s5_find_dirent_helper(vnode_t *vnode, const char *name, size_t namele
     }
 
     return -ENOENT;
-}
-
-/* returns the offset of the first empy dirent in vnode, or the length of the vnode
- *  if none exists. This function May also return any error that s5_find_dirent_helper
- *   returns. This function assumes that vnode is a directory.
- */
-static int find_empty_dirent(vnode_t *vnode){
-    KASSERT(vnode->vn_ops->mkdir != NULL);
-    off_t offset;
-    int find_res = s5_find_dirent_helper(vnode, "", 0, &offset, NULL);
-
-    switch (find_res){
-        case 0:
-            return offset;
-        case -ENOENT:
-            return vnode->vn_len;
-        default:
-            return find_res;
-    }
 }
 
 /*
