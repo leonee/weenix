@@ -64,8 +64,6 @@ int
 dir_namev(const char *pathname, size_t *namelen, const char **name,
           vnode_t *base, vnode_t **res_vnode)
 {
-    static kmutex_t lookup_mutex;
-
     if (*pathname == '\0'){
         return -EINVAL;
     }
@@ -102,7 +100,6 @@ dir_namev(const char *pathname, size_t *namelen, const char **name,
     int errcode = 0;
 
     while (lookup_result >= 0 && pathname[next_name] != '\0'){
-        static kmutex_t lookup_mutex = KMUTEX_STATIC_INITIALIZER(lookup_mutex);
         if (parent != NULL){
             vput(parent);
         }
@@ -126,10 +123,8 @@ dir_namev(const char *pathname, size_t *namelen, const char **name,
         }
 
         /* then, look up the node */
-        kmutex_lock(&lookup_mutex);
         lookup_result = lookup(parent, (pathname + dir_name_start),
                 next_name - dir_name_start, &curr);
-        kmutex_unlock(&lookup_mutex);
 
         if (lookup_result == -ENOTDIR){
             errcode = -ENOTDIR;
@@ -188,6 +183,8 @@ dir_namev(const char *pathname, size_t *namelen, const char **name,
 int
 open_namev(const char *pathname, int flag, vnode_t **res_vnode, vnode_t *base)
 {
+    static kmutex_t lookup_mutex = KMUTEX_STATIC_INITIALIZER(lookup_mutex);
+
     size_t namelen;
     const char *name;
 
@@ -200,6 +197,7 @@ open_namev(const char *pathname, int flag, vnode_t **res_vnode, vnode_t *base)
         return namev_result;
     }
   
+    kmutex_lock(&lookup_mutex);
     int lookup_res = lookup(dir, name, namelen, res_vnode);
 
     int ret_val = lookup_res;
@@ -222,10 +220,9 @@ open_namev(const char *pathname, int flag, vnode_t **res_vnode, vnode_t *base)
         ret_val = -EISDIR;
         vput(*res_vnode);
         *res_vnode = NULL;
-    }/* else if ((*res_vnode)->vn_ops->mkdir == NULL && (flag & O_DIRECTORY)){
-        ret_val = -ENOTDIR;
-    }*/
+    }
 
+    kmutex_unlock(&lookup_mutex);
     vput(dir);
 
     return ret_val;
