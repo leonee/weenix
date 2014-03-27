@@ -144,7 +144,10 @@ s5_seek_to_block(vnode_t *vnode, off_t seekptr, int alloc)
 
         /* case where we've found a sparse block and need to allocate*/
         if (block_num == 0 && alloc){
+
+            pframe_pin(ind_page);
             int block_num = s5_alloc_block(VNODE_TO_S5FS(vnode));
+            pframe_unpin(ind_page);
 
             if (block_num == -ENOSPC){
                 dbg(DBG_S5FS, "couldn't alloc a new block\n");
