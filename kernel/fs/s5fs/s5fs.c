@@ -448,6 +448,7 @@ s5fs_create(vnode_t *dir, const char *name, size_t namelen, vnode_t **result)
 
     if (ino < 0){
         dbg(DBG_S5FS, "unable to alloc a new inode\n");
+        return ino;
     }
 
     child = vget(fs, ino);
@@ -500,6 +501,11 @@ s5fs_mknod(vnode_t *dir, const char *name, size_t namelen, int mode, devid_t dev
         ino = s5_alloc_inode(fs, S5_TYPE_BLK, devid);
     } else {
         panic("invalid mode");
+    }
+
+    if (ino < 0){
+        dbg(DBG_S5FS, "unable to alloc a new inode\n");
+        return ino;
     }
     
     child = vget(fs, ino);
@@ -617,6 +623,7 @@ s5fs_mkdir(vnode_t *dir, const char *name, size_t namelen)
 
     if (ino < 0){
         dbg(DBG_S5FS, "unable to alloc a new inode\n");
+        return ino;
     }
 
     child = vget(fs, ino);

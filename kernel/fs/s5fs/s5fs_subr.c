@@ -594,17 +594,16 @@ static int s5_find_dirent_helper(vnode_t *vnode, const char *name, size_t namele
     off_t seek = 0;
 
     while (seek < vnode->vn_len){
-        int readsize = min(vnode->vn_len - seek, NDIRENTS * sizeof(s5_dirent_t));
-        KASSERT(readsize % sizeof(s5_dirent_t) == 0);
-
-        int dirents_read = readsize / sizeof(s5_dirent_t);
-
-        int read_res = s5_read_file(vnode, seek, (char *) dirents, readsize);
+        int read_res = s5_read_file(vnode, seek, (char *) dirents, 
+                NDIRENTS * sizeof(s5_dirent_t)); 
 
         if (read_res < 0){
             dbg(DBG_S5FS, "error getting dirents\n");
             return read_res;
         }
+
+        int dirents_read = read_res / sizeof(s5_dirent_t);
+
         int i;
         for (i = 0; i < dirents_read; i++){
             if (name_match(dirents[i].s5d_name, name, namelen)){
@@ -729,6 +728,7 @@ s5_remove_dirent(vnode_t *vnode, const char *name, size_t namelen)
 
         if (write_res < 0){
             dbg(DBG_S5FS, "error overwriting dirent to remove with last dirent\n");
+            return write_res;
         }
     }
 
@@ -781,7 +781,7 @@ s5_link(vnode_t *parent, vnode_t *child, const char *name, size_t namelen)
     memcpy(d.s5d_name, name, namelen);
     d.s5d_name[namelen] = '\0';
 
-    off_t write_offset = find_empty_dirent(parent);
+    off_t write_offset = parent->vn_len; /*find_empty_dirent(parent);*/
 
     if (write_offset < 0){
         dbg(DBG_S5FS, "error finding dirent to write to\n");

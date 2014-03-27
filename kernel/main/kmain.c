@@ -332,7 +332,7 @@ initproc_run(int arg1, void *arg2)
     /*run_ata_tests();*/
     run_s5fs_tests();
 
-    vfstest_main(1, NULL);
+    /*vfstest_main(1, NULL);*/
     
     kshell_add_command("proctest", proctests, "tests proc code");
 
