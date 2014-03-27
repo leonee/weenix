@@ -22,6 +22,11 @@
 #include "fs/stat.h"
 #include "util/debug.h"
 
+#define KMUTEX_STATIC_INITIALIZER(name) {{{&name.km_waitq.tq_list,\
+    &name.km_waitq.tq_list}, 0}, NULL}
+
+static kmutex_t lookup_mutex = KMUTEX_STATIC_INITIALIZER(lookup_mutex);
+
 /* To read a file:
  *      o fget(fd)
  *      o call its virtual read f_op
