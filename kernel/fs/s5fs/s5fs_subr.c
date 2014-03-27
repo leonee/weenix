@@ -239,8 +239,14 @@ s5_write_file(vnode_t *vnode, off_t seek, const char *bytes, size_t len)
     }
 
     /* extend file size, if necessary */
-    vnode->vn_len = max(seek + len, vnode->vn_len);
-    VNODE_TO_S5INODE(vnode)->s5_size = vnode->vn_len;
+    if (seek + len > (unsigned) vnode->vn_len){
+        vnode->vn_len = seek + len;
+        VNODE_TO_S5INODE(vnode)->s5_size = vnode->vn_len;
+        s5_dirty_inode(VNODE_TO_S5FS(vnode), VNODE_TO_S5INODE(vnode));
+    }
+
+    off_t start_pos = seek;
+    off_t end_pos = min(seek + len, vnode->vn_len);
 
     unsigned int srcpos = 0;
     int get_res;
@@ -257,11 +263,7 @@ s5_write_file(vnode_t *vnode, off_t seek, const char *bytes, size_t len)
             return get_res;
         }
 
-        if (PAGE_SIZE - data_offset > len){
-            write_size = S5_DATA_OFFSET(len);
-        } else {
-            write_size = PAGE_SIZE - data_offset;
-        }
+        write_size = min(PAGE_SIZE - data_offset, end_pos - seek);
 
         KASSERT(write_size >= 0 && "write size is negative");
         memcpy((char *) p->pf_addr + data_offset, (void *) bytes, write_size);
