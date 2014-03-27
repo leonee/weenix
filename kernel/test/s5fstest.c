@@ -122,10 +122,65 @@ static void test_max_inodes(){
     dbg(DBG_TESTPASS, "all max inodes tests passed\n");
 }
 
+static void test_max_data(){
+    int data_blocks_in_use = 58 + S5_INODE_BLOCK(239);
+    int free_data_blocks = 2048 - data_blocks_in_use;
+
+    int fullfd = do_open("/fullfile", O_RDWR|O_CREAT);
+    KASSERT(fullfd >= 0 && fullfd < NFILES);
+
+    do_lseek(fullfd, 0, SEEK_SET);
+
+    char writebuf[BLOCK_SIZE];
+
+    int i;
+    for (i = 0; i < S5_BLOCK_SIZE; i++){
+        writebuf[i] = 'a';
+    }
+
+    unsigned int j;
+    for (j = 0; j < S5_MAX_FILE_BLOCKS; j++){
+        KASSERT(do_write(fullfd, (void *) writebuf, S5_BLOCK_SIZE) == S5_BLOCK_SIZE);
+    }
+
+    KASSERT(do_close(fullfd) == 0);
+
+    free_data_blocks -= (S5_MAX_FILE_BLOCKS + 1);
+
+
+    int bigfd = do_open("/bigfile", O_RDWR|O_CREAT);
+    KASSERT(bigfd >= 0 && bigfd < NFILES);
+
+    do_lseek(bigfd, 0, SEEK_SET);
+
+    while (free_data_blocks > 0){
+        dbg(DBG_TEST, "free_data_blocks = %d\n", free_data_blocks);
+        KASSERT(do_write(bigfd, (void *) writebuf, S5_BLOCK_SIZE) == S5_BLOCK_SIZE);
+        free_data_blocks--;
+    }
+
+    /* we can also hold some stuff in RAM, so we can do a few more writes */
+    int last_write_res;
+
+    while ((last_write_res = do_write(bigfd, (void *) writebuf, S5_BLOCK_SIZE))
+            == S5_BLOCK_SIZE){
+        /* do nothing */
+    }
+
+    KASSERT(last_write_res == -ENOSPC);
+
+    KASSERT(do_unlink("/fullfile") == 0);
+
+    KASSERT(do_write(bigfd, (void *) writebuf, S5_BLOCK_SIZE) == S5_BLOCK_SIZE);
+
+    KASSERT(do_unlink("/bigfile") == 0);
+}
+
 
 void run_s5fs_tests(){
     run_indirect_test();
     test_max_inodes();
+    test_max_data();
 
     dbg(DBG_TESTPASS, "All s5fs tests passed!\n");
 }

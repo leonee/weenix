@@ -77,7 +77,11 @@ static int alloc_indirect_block(vnode_t *v){
 
     memcpy(ind_page->pf_addr, zero_array, BLOCK_SIZE);
 
-    pframe_dirty(ind_page);
+    int dirty_res = pframe_dirty(ind_page);
+
+    if (dirty_res < 0){
+        return dirty_res;
+    }
 
     /* finally, set this block to be the indirect block of the inode */
     inode->s5_indirect_block = indirect_block;
@@ -152,8 +156,12 @@ s5_seek_to_block(vnode_t *vnode, off_t seekptr, int alloc)
             ((uint32_t *) ind_page->pf_addr)[block_index - S5_NDIRECT_BLOCKS] = block_num;
 
             pframe_pin(ind_page);
-            pframe_dirty(ind_page);
+            int dirty_res = pframe_dirty(ind_page);
             pframe_unpin(ind_page);
+
+            if (dirty_res < 0){
+                return dirty_res;
+            }
 
         }
 
@@ -268,8 +276,12 @@ s5_write_file(vnode_t *vnode, off_t seek, const char *bytes, size_t len)
         KASSERT(write_size >= 0 && "write size is negative");
         memcpy((char *) p->pf_addr + data_offset, (void *) bytes, write_size);
         pframe_pin(p);
-        pframe_dirty(p);
+        int dirty_res = pframe_dirty(p);
         pframe_unpin(p);
+
+        if (dirty_res < 0){
+            return dirty_res;
+        }
 
         srcpos += write_size;
         seek += write_size; 
