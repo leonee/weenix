@@ -155,9 +155,7 @@ s5_seek_to_block(vnode_t *vnode, off_t seekptr, int alloc)
 
             ((uint32_t *) ind_page->pf_addr)[block_index - S5_NDIRECT_BLOCKS] = block_num;
 
-            pframe_pin(ind_page);
             int dirty_res = pframe_dirty(ind_page);
-            pframe_unpin(ind_page);
 
             if (dirty_res < 0){
                 return dirty_res;
@@ -170,9 +168,9 @@ s5_seek_to_block(vnode_t *vnode, off_t seekptr, int alloc)
 
         /* case where we've found a sparse block and need to allocate*/
         if (block_num == 0 && alloc){
-            uint32_t block_num = s5_alloc_block(VNODE_TO_S5FS(vnode));
+            int block_num = s5_alloc_block(VNODE_TO_S5FS(vnode));
 
-            if ((signed) block_num == -ENOSPC){
+            if (block_num == -ENOSPC){
                 dbg(DBG_S5FS, "couldn't alloc a new block\n");
                 return -ENOSPC;
             }
