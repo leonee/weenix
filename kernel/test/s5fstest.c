@@ -119,10 +119,41 @@ static void test_max_inodes(){
         KASSERT(do_unlink(filenames[j]) == 0);
     }
 
-    dbg(DBG_TESTPASS, "all max inodes tests passed\n");
+    dbg(DBG_TEST, "all max inodes tests passed\n");
+}
+
+static void test_max_file_length(){
+    dbg(DBG_TEST, "testing max file length\n");
+
+    int fd = do_open("/largefile", O_RDWR|O_CREAT);
+    KASSERT(fd >= 0 && fd < NFILES);
+
+    do_lseek(fd, S5_MAX_FILE_SIZE - 2, SEEK_SET);
+
+    char writebuf[3] = {'a', 'a', 'a'};
+    char readbuf[3] = {'b', 'b', 'b'};
+
+    KASSERT(do_write(fd, (void *) writebuf, 1) == 1);
+
+    KASSERT(do_write(fd, (void *) writebuf, 1) == 0);
+
+    do_lseek(fd, S5_MAX_FILE_SIZE - 2, SEEK_SET);
+
+    KASSERT(do_read(fd, (void *) readbuf, 3) == 1);
+    KASSERT(readbuf[0] == 'a');
+    KASSERT(readbuf[1] == 'b');
+    KASSERT(readbuf[2] == 'b');
+
+    KASSERT(do_close(fd) == 0);
+
+    KASSERT(do_unlink("/largefile") == 0);
+
+    dbg(DBG_TEST, "all max file length tests passed\n");
 }
 
 static void test_max_data(){
+    dbg(DBG_TEST, "testing maxing out on disk space\n");
+
     int data_blocks_in_use = 58 + S5_INODE_BLOCK(239);
     int free_data_blocks = 2048 - data_blocks_in_use;
 
@@ -139,7 +170,7 @@ static void test_max_data(){
     }
 
     unsigned int j;
-    for (j = 0; j < S5_MAX_FILE_BLOCKS; j++){
+    for (j = 0; j < S5_MAX_FILE_BLOCKS - 1; j++){
         KASSERT(do_write(fullfd, (void *) writebuf, S5_BLOCK_SIZE) == S5_BLOCK_SIZE);
     }
 
@@ -174,12 +205,15 @@ static void test_max_data(){
     KASSERT(do_write(bigfd, (void *) writebuf, S5_BLOCK_SIZE) == S5_BLOCK_SIZE);
 
     KASSERT(do_unlink("/bigfile") == 0);
+
+    dbg(DBG_TEST, "all disk space tests passed\n");
 }
 
 
 void run_s5fs_tests(){
     run_indirect_test();
     test_max_inodes();
+    test_max_file_length();
     test_max_data();
 
     dbg(DBG_TESTPASS, "All s5fs tests passed!\n");

@@ -242,8 +242,8 @@ s5_write_file(vnode_t *vnode, off_t seek, const char *bytes, size_t len)
         return -EINVAL;
     }
 
-    if (seek + len > S5_MAX_FILE_SIZE){
-        len = S5_MAX_FILE_SIZE - seek;
+    if (seek + len >= S5_MAX_FILE_SIZE){
+        len = S5_MAX_FILE_SIZE - seek - 1;
     }
 
     /* extend file size, if necessary */

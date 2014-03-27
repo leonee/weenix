@@ -1,18 +1,10 @@
 in s5_seek_to_block()
     - what to do if seekptr is great than file length
       and we're not allocating?
-    - do we zero everything if we seek past file length?
     - where do we use pin() and unpin()?
-
-in s5fs_fillpage()
-    - what does this even return?
 
 in s5_link()
     - why do we need to call s5_find_dirent()?
-
-in s5fs_mkdir()
-    - should we vput the child vnode?
-    - what should the refcounts on the vnode and inode be?
 
 in s5_read_vnode()
     - so do we just not initialize the vn_ops and device
@@ -21,18 +13,6 @@ in s5_read_vnode()
 
 in s5_read/delete_vnode()
     - should we dirty the inode?
-
-in s5fs_stat()
-    - do we just assign vnode->vn_mode directly?
-
-in s5fs_rmdir()
-    - do I not need to manually decrement the linkcount 
-    on the parent and call s5_dirty_inode?
-
-in s5_read_file()
-    - what should the return be if we read beyond the length of the file?
-    The comments seem to suggest 0, but that just doesn't seem to work
-    for me.
 
 In general:
     - Should the pageoutdaemon have a cwd? If so,
