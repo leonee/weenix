@@ -89,8 +89,8 @@ dir_namev(const char *pathname, size_t *namelen, const char **name,
     vref(curr);
 
     if (*pathname == '\0'){
-        *namelen = 0;
-        *name = pathname;
+        *namelen = 1;
+        *name = ".";
         *res_vnode = curr;
         return 0;
     }

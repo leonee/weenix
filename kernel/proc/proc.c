@@ -151,13 +151,14 @@ proc_create(char *name)
         p->p_files[j] = NULL;
     } 
 
-
     if (p->p_pid > 2){
         p->p_cwd = p->p_pproc->p_cwd;
         vref(p->p_cwd);
+    } else {
+        /* bad, but we'll catch this later with a KASSERT if it doesn't
+         * get set later */
+        p->p_cwd = NULL;
     }
-
-
 #endif
 
     return p;
@@ -238,8 +239,12 @@ proc_cleanup(int status)
             do_close(i);
         }
     }
-    vput(curproc->p_cwd);
-    curproc->p_cwd = NULL;
+
+    if (curproc->p_pid != 2){
+        KASSERT(curproc->p_cwd != NULL && "cwd is null");
+        vput(curproc->p_cwd);
+        curproc->p_cwd = NULL;
+    }
 #endif
 
     sched_wakeup_on(&curproc->p_pproc->p_wait);
@@ -398,7 +403,10 @@ static pid_t do_waitpid_any(int *status){
 
     cleanup_child_proc(dead_child);
 
-    *status = dead_child->p_status;
+    if (status != NULL){
+        *status = dead_child->p_status;
+    }
+
     return dead_child->p_pid;
 }
 
@@ -447,7 +455,10 @@ static pid_t do_waitpid_specific(pid_t pid, int *status){
 
     cleanup_child_proc(p);
 
-    *status = p->p_status;
+    if (status != NULL){
+        *status = p->p_status;
+    }
+
     return p->p_pid;
 }
 

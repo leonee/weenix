@@ -297,8 +297,37 @@ pframe_fill(pframe_t *pf)
 int
 pframe_get(struct mmobj *o, uint32_t pagenum, pframe_t **result)
 {
-        NOT_YET_IMPLEMENTED("S5FS: pframe_get");
-        return 0;
+    *result = pframe_get_resident(o, pagenum);
+
+    if (*result == NULL){
+        *result = pframe_alloc(o, pagenum);
+
+        if (*result == NULL){
+            dbg(DBG_S5FS, "could not allocate a pframe\n");
+            return -ENOMEM;
+        }
+
+        int fill_res = pframe_fill(*result);
+
+        if (fill_res < 0){
+            pframe_free(*result);
+            return fill_res;
+        }
+
+        if (pageoutd_needed()){
+            pageoutd_wakeup();
+        }
+
+    } else {
+       KASSERT(!pframe_is_free(*result) && "residant page marked as free?!?!?!\n");
+
+       while (pframe_is_busy(*result)){
+           sched_sleep_on(&(*result)->pf_waitq);
+       } 
+    }
+
+    KASSERT(!pframe_is_busy(*result) && "trying to return a busy pframe. NO!!!\n");
+    return 0;
 }
 
 int
@@ -357,7 +386,20 @@ pframe_migrate(pframe_t *pf, mmobj_t *dest)
 void
 pframe_pin(pframe_t *pf)
 {
-        NOT_YET_IMPLEMENTED("S5FS: pframe_pin");
+    KASSERT(!pframe_is_free(pf) && "trying to pin a pframe marked as free\n");
+
+    if (!pframe_is_pinned(pf)){
+        /* make sure it's in the alloc list already */
+        /*KASSERT(list_item(&alloc_list, pframe_t, pf_link) == pf);*/
+
+        list_remove(&pf->pf_link);
+        list_insert_head(&pinned_list, &pf->pf_link);
+        
+        nallocated--;
+        npinned++;
+    }
+
+    pf->pf_pincount++;
 }
 
 /*
@@ -373,7 +415,18 @@ pframe_pin(pframe_t *pf)
 void
 pframe_unpin(pframe_t *pf)
 {
-        NOT_YET_IMPLEMENTED("S5FS: pframe_unpin");
+    KASSERT(pf->pf_pincount > 0 && "trying to unpin an unpinned pframe\n");
+    KASSERT(list_item(&pinned_list, pframe_t, pf_link));
+
+    pf->pf_pincount--;
+
+    if (pf->pf_pincount == 0){
+        list_remove(&pf->pf_link);
+        list_insert_head(&alloc_list, &pf->pf_link);
+
+        nallocated++;
+        npinned--;
+    }
 }
 
 /*

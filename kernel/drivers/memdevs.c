@@ -118,7 +118,7 @@ zero_read(bytedev_t *dev, int offset, void *buf, int count)
 {
     int i;
     for (i = 0; i < count; i++){
-        ((char *)buf)[i] = '0';
+        ((char *)buf)[i] = '\0';
     }
 
     return count;

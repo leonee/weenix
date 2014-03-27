@@ -1,6 +1,7 @@
 #include "types.h"
 #include "globals.h"
 #include "kernel.h"
+#include "errno.h"
 
 #include "util/gdb.h"
 #include "util/init.h"
@@ -47,6 +48,7 @@
 #include "test/ttytest.h"
 #include "test/atatest.h"
 #include "test/memdevtest.h"
+#include "test/s5fstest.h"
 
 #include "test/kshell/kshell.h"
 #include "../test/kshell/priv.h"
@@ -206,18 +208,21 @@ idleproc_run(int arg1, void *arg2)
      You can't do this until you have VFS, check the include/drivers/dev.h
      file for macros with the device ID's you will need to pass to mknod */
     int mkdir_res = do_mkdir("/dev");
-    KASSERT(mkdir_res == 0 && "unable to create dev directory\n");
 
-    if (do_mknod("/dev/tty0", S_IFCHR, MKDEVID(2, 0)) < 0){
-        panic("unable to create tty0\n");
-    }
+    if (mkdir_res == 0){
+        if (do_mknod("/dev/tty0", S_IFCHR, MKDEVID(2, 0)) < 0){
+            panic("unable to create tty0\n");
+        }
 
-    if (do_mknod("/dev/null", S_IFBLK, MEM_NULL_DEVID) < 0){
-        panic("unable to create /dev/null");
-    } 
+        if (do_mknod("/dev/null", S_IFBLK, MEM_NULL_DEVID) < 0){
+            panic("unable to create /dev/null");
+        } 
 
-    if (do_mknod("/dev/zero", S_IFBLK, MEM_ZERO_DEVID) < 0){
-        panic("unable to create /dev/zero");
+        if (do_mknod("/dev/zero", S_IFBLK, MEM_ZERO_DEVID) < 0){
+            panic("unable to create /dev/zero");
+        }
+    } else {
+        KASSERT(mkdir_res == -EEXIST && "wrong type of error when making /dev");
     }
 
     /*kmutex_init(&lookup_mutex);*/
@@ -324,7 +329,9 @@ initproc_run(int arg1, void *arg2)
     run_proc_tests();
     run_tty_tests();
     run_memdev_tests();
-    run_ata_tests();
+    /*run_ata_tests();*/
+
+    run_s5fs_tests();
 
     vfstest_main(1, NULL);
     

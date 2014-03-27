@@ -1,0 +1,14 @@
+in s5_seek_to_block()
+    - what to do if seekptr is great than file length
+      and we're not allocating?
+    - where do we use pin() and unpin()?
+
+in s5_link()
+    - why do we need to call s5_find_dirent()?
+
+in s5_read/delete_vnode()
+    - should we dirty the inode?
+
+In general:
+    - Should the pageoutdaemon have a cwd? If so,
+    what should it be, and how should we set it?

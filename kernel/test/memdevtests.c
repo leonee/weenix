@@ -38,7 +38,7 @@ static void test_dev_zero(){
 
     int j;
     for (j = 0; j < 1000; j++){
-        KASSERT(buf[j] == '0');
+        KASSERT(buf[j] == '\0');
     }
 
     dbg(DBG_TESTPASS, "all dev zero tests passed\n");

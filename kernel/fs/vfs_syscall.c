@@ -210,13 +210,13 @@ do_dup2(int ofd, int nfd)
 {
     dbg(DBG_VFS, "calling do_dup2 on ofd %d and nfd %d\n", ofd, nfd);
 
-    if (ofd == nfd){
-        return ofd;
-    }
-
     if (ofd < 0 || ofd >= NFILES || curproc->p_files[ofd] == NULL
         || nfd < 0 || nfd >= NFILES){
         return -EBADF;
+    }
+
+    if (ofd == nfd){
+        return ofd;
     }
 
     if (ofd != nfd && curproc->p_files[nfd] != NULL){
