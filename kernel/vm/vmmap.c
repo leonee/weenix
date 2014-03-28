@@ -97,8 +97,28 @@ vmmap_insert(vmmap_t *map, vmarea_t *newvma)
 int
 vmmap_find_range(vmmap_t *map, uint32_t npages, int dir)
 {
-        NOT_YET_IMPLEMENTED("VM: vmmap_find_range");
-        return -1;
+    KASSERT(map != NULL);
+    KASSERT(dir == VMMAP_DIR_LOHI || dir == VMMAP_DIR_HILO);
+
+    list_t *vmm_list = &map->vmm_list;
+
+    vmarea_t *curr;
+
+    if (dir == VMMAP_DIR_LOHI){
+        list_iterate_begin(vmm_list, curr, vmarea_t, vma_plink){
+            if (curr ->vma_end - curr->vma_start >= npages){
+                return curr->vma_start;
+            }
+        } list_iterate_end();
+    } else {
+        list_iterate_reverse(vmm_list, curr, vmarea_t, vma_plink){
+            if (curr ->vma_end - curr->vma_start >= npages){
+                return curr->vma_start;
+            }
+        } list_iterate_end();
+    }
+
+    return -1;
 }
 
 /* Find the vm_area that vfn lies in. Simply scan the address space
