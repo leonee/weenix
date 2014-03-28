@@ -214,13 +214,13 @@ idleproc_run(int arg1, void *arg2)
             panic("unable to create tty0\n");
         }
 
-        /*if (do_mknod("/dev/tty1", S_IFCHR, MKDEVID(2, 1)) < 0){*/
-            /*panic("unable to create tty1\n");*/
-        /*}*/
+        if (do_mknod("/dev/tty1", S_IFCHR, MKDEVID(2, 1)) < 0){
+            panic("unable to create tty1\n");
+        }
 
-        /*if (do_mknod("/dev/tty2", S_IFCHR, MKDEVID(2, 2)) < 0){*/
-            /*panic("unable to create tty2\n");*/
-        /*}*/
+        if (do_mknod("/dev/tty2", S_IFCHR, MKDEVID(2, 2)) < 0){
+            panic("unable to create tty2\n");
+        }
 
         if (do_mknod("/dev/null", S_IFBLK, MEM_NULL_DEVID) < 0){
             panic("unable to create /dev/null");
@@ -334,17 +334,17 @@ static void *
 initproc_run(int arg1, void *arg2)
 {
     
-    run_proc_tests();
-    run_tty_tests();
-    run_memdev_tests();
-    /*run_ata_tests();*/
+    /*run_proc_tests();*/
+    /*run_tty_tests();*/
+    /*run_memdev_tests();*/
+    /*[>run_ata_tests();<]*/
 
-    int i;
-    for (i = 0; i < 4; i++){
-        run_s5fs_tests();
-    }
+    /*int i;*/
+    /*for (i = 0; i < 4; i++){*/
+        /*run_s5fs_tests();*/
+    /*}*/
     
-    vfstest_main(1, NULL);   
+    /*vfstest_main(1, NULL);   */
     
     kshell_add_command("proctest", proctests, "tests proc code");
 

@@ -81,7 +81,7 @@ makedirs(const char *dir)
                 return errno;
         }
 
-        kfree(d);
+        free(d);
         return 0;
 }
 
