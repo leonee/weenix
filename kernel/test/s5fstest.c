@@ -213,7 +213,7 @@ static void test_max_data(){
 
 
 void run_s5fs_tests(){
-    /*run_indirect_test();*/
+    run_indirect_test();
     test_max_inodes();
     test_max_file_length();
     test_max_data();
