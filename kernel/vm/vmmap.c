@@ -106,13 +106,13 @@ vmmap_find_range(vmmap_t *map, uint32_t npages, int dir)
 
     if (dir == VMMAP_DIR_LOHI){
         list_iterate_begin(vmm_list, curr, vmarea_t, vma_plink){
-            if (curr ->vma_end - curr->vma_start >= npages){
+            if (curr->vma_end - curr->vma_start >= npages){
                 return curr->vma_start;
             }
         } list_iterate_end();
     } else {
         list_iterate_reverse(vmm_list, curr, vmarea_t, vma_plink){
-            if (curr ->vma_end - curr->vma_start >= npages){
+            if (curr->vma_end - curr->vma_start >= npages){
                 return curr->vma_start;
             }
         } list_iterate_end();
@@ -218,8 +218,21 @@ vmmap_remove(vmmap_t *map, uint32_t lopage, uint32_t npages)
 int
 vmmap_is_range_empty(vmmap_t *map, uint32_t startvfn, uint32_t npages)
 {
-        NOT_YET_IMPLEMENTED("VM: vmmap_is_range_empty");
-        return 0;
+    KASSERT(map != NULL);
+
+    uint32_t endvfn = startvfn + npages;
+
+    vmarea_t *curr;
+
+    list_iterate_begin(&map->vmm_list, curr, vmarea_t, vma_plink){
+        if ((curr->vma_end > startvfn && curr->vma_end <= endvfn) ||
+            (curr->vma_start > startvfn && curr->vma_start < endvfn))
+        {
+            return 0;
+        }
+    } list_iterate_end();
+
+    return 1;
 }
 
 /* Read into 'buf' from the virtual address space of 'map' starting at
