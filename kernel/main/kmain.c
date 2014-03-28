@@ -49,11 +49,11 @@
 #include "test/atatest.h"
 #include "test/memdevtest.h"
 #include "test/s5fstest.h"
+#include "test/vmmtest.h"
 
 #include "test/kshell/kshell.h"
 #include "../test/kshell/priv.h"
 #include "../test/kshell/command.h"
-
 
 GDB_DEFINE_HOOK(boot)
 GDB_DEFINE_HOOK(initialized)
@@ -311,6 +311,8 @@ static void destroy_kshell_commands(){
     while (link != commands){
         kshell_command_t *cmd = list_item(link, kshell_command_t, kc_commands_link);
 
+        
+        
         link = link->l_next;
 
          if (cmd != NULL){
@@ -333,7 +335,9 @@ static void destroy_kshell_commands(){
 static void *
 initproc_run(int arg1, void *arg2)
 {
-    kernel_execve("/sbin/init", NULL, NULL);
+    run_vmm_tests();
+
+    /*kernel_execve("/sbin/init", NULL, NULL);*/
     
     /*run_proc_tests();*/
     /*run_tty_tests();*/
