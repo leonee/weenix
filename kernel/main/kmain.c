@@ -333,6 +333,7 @@ static void destroy_kshell_commands(){
 static void *
 initproc_run(int arg1, void *arg2)
 {
+    kernel_execve("/sbin/init", NULL, NULL);
     
     /*run_proc_tests();*/
     /*run_tty_tests();*/
@@ -346,19 +347,19 @@ initproc_run(int arg1, void *arg2)
     
     /*vfstest_main(1, NULL);   */
     
-    kshell_add_command("proctest", proctests, "tests proc code");
+/*    kshell_add_command("proctest", proctests, "tests proc code");*/
 
-    kshell_add_command("ar", kshell_ata_read, "tests ata_read");
-    kshell_add_command("aw", kshell_ata_write, "tests ata_write");
+    /*kshell_add_command("ar", kshell_ata_read, "tests ata_read");*/
+    /*kshell_add_command("aw", kshell_ata_write, "tests ata_write");*/
 
-    int err = 0;
-    kshell_t *ksh = kshell_create(0);
-    KASSERT(ksh && "did not create a kernel shell as expected");
+    /*int err = 0;*/
+    /*kshell_t *ksh = kshell_create(0);*/
+    /*KASSERT(ksh && "did not create a kernel shell as expected");*/
 
-    while ((err = kshell_execute_next(ksh)) > 0);
-    KASSERT(err == 0 && "kernel shell exited with an error\n");
-    destroy_kshell_commands(); 
-    kshell_destroy(ksh);
+    /*while ((err = kshell_execute_next(ksh)) > 0);*/
+    /*KASSERT(err == 0 && "kernel shell exited with an error\n");*/
+    /*destroy_kshell_commands(); */
+    /*kshell_destroy(ksh);*/
 
 /*
    list_t *children = &curproc->p_children; 

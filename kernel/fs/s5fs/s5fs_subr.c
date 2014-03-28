@@ -652,7 +652,6 @@ s5_find_dirent(vnode_t *vnode, const char *name, size_t namelen)
     if (find_res == 0){
         return ino;
     } else {
-        dbg(DBG_S5FS, "unable to locate directory\n");
         return find_res;
     }
 }
