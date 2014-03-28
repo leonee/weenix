@@ -65,6 +65,11 @@ void test_vmmap_is_range_empty(){
 
     list_insert_tail(&vmm->vmm_list, &ten_to_twenty.vma_plink);
 
+    /* key:
+     *    [        ] Existing VM Area
+     *  *******      Range for which we're testing emptiness
+     */
+
     /*       [  ****    ]      */
     KASSERT(vmmap_is_range_empty(vmm, 13, 4) == 0);
 
