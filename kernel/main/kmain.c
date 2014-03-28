@@ -331,9 +331,12 @@ initproc_run(int arg1, void *arg2)
     run_memdev_tests();
     /*run_ata_tests();*/
 
-    run_s5fs_tests();
-
-    vfstest_main(1, NULL);
+    int i;
+    for (i = 0; i < 4; i++){
+        run_s5fs_tests();
+    }
+    
+    vfstest_main(1, NULL);   
     
     kshell_add_command("proctest", proctests, "tests proc code");
 

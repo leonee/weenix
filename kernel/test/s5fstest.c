@@ -154,11 +154,11 @@ static void test_max_file_length(){
 static void test_max_data(){
     dbg(DBG_TEST, "testing maxing out on disk space\n");
 
-    int data_blocks_in_use = 58 + S5_INODE_BLOCK(239);
+    int data_blocks_in_use = 58 + S5_INODE_BLOCK(239) + 1;
     int free_data_blocks = 2048 - data_blocks_in_use;
 
     int fullfd = do_open("/fullfile", O_RDWR|O_CREAT);
-    KASSERT(fullfd >= 0 && fullfd < NFILES);
+    KASSERT(fullfd == 0);
 
     do_lseek(fullfd, 0, SEEK_SET);
 
@@ -180,7 +180,7 @@ static void test_max_data(){
 
 
     int bigfd = do_open("/bigfile", O_RDWR|O_CREAT);
-    KASSERT(bigfd >= 0 && bigfd < NFILES);
+    KASSERT(bigfd == 0);
 
     do_lseek(bigfd, 0, SEEK_SET);
 
@@ -204,6 +204,8 @@ static void test_max_data(){
 
     KASSERT(do_write(bigfd, (void *) writebuf, S5_BLOCK_SIZE) == S5_BLOCK_SIZE);
 
+    KASSERT(do_close(bigfd) == 0);
+
     KASSERT(do_unlink("/bigfile") == 0);
 
     dbg(DBG_TEST, "all disk space tests passed\n");
@@ -211,7 +213,7 @@ static void test_max_data(){
 
 
 void run_s5fs_tests(){
-    run_indirect_test();
+    /*run_indirect_test();*/
     test_max_inodes();
     test_max_file_length();
     test_max_data();
