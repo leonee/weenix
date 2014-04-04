@@ -87,6 +87,18 @@ vmmap_insert(vmmap_t *map, vmarea_t *newvma)
         NOT_YET_IMPLEMENTED("VM: vmmap_insert");
 }
 
+/* returns one if the two vm areas are contiguous */
+static int is_contiguous(vmarea_t *vma1, vmarea_t *vma2){
+    if (vma1 == NULL || vma2 == NULL){
+        return 0;
+    }
+
+    uint32_t vma1_end = vma1->vma_off + vma1->vma_end;
+    uint32_t vma2_start = vma2->vma_off + vma2->vma_start;
+
+    return vma1_end == vma2_start;
+}
+
 /* Find a contiguous range of free virtual pages of length npages in
  * the given address space. Returns starting vfn for the range,
  * without altering the map. Returns -1 if no such range exists.
@@ -102,20 +114,49 @@ vmmap_find_range(vmmap_t *map, uint32_t npages, int dir)
 
     list_t *vmm_list = &map->vmm_list;
 
-    vmarea_t *curr;
+    if list_empty(vmm_list){
+        return -1;
+    }
+
+    vmarea_t *prev = NULL;
+    list_link_t *currlink;
 
     if (dir == VMMAP_DIR_LOHI){
-        list_iterate_begin(vmm_list, curr, vmarea_t, vma_plink){
-            if (curr->vma_end - curr->vma_start >= npages){
-                return curr->vma_start;
+        uint32_t start_vfn; 
+        currlink = vmm_list->l_next;
+
+        while (currlink != vmm_list){
+            vmarea_t *curr = list_item(currlink, vmarea_t, vma_plink);
+
+            if (!is_contiguous(prev, curr)){
+                start_vfn = curr->vma_start;
             }
-        } list_iterate_end();
+
+            if (curr->vma_end - start_vfn >= npages){
+                return start_vfn;
+            }
+
+            prev = curr;
+            currlink = currlink->l_next;
+        }
     } else {
-        list_iterate_reverse(vmm_list, curr, vmarea_t, vma_plink){
-            if (curr->vma_end - curr->vma_start >= npages){
+        uint32_t end_vfn;
+        currlink = vmm_list->l_prev;
+
+        while(currlink != vmm_list){
+            vmarea_t *curr = list_item(currlink, vmarea_t, vma_plink);
+
+            if (!is_contiguous(curr, prev)){
+                end_vfn = curr->vma_end;
+            }
+
+            if (end_vfn - curr->vma_start >= npages){
                 return curr->vma_start;
             }
-        } list_iterate_end();
+
+            prev = curr;
+            currlink = currlink->l_prev;
+        }
     }
 
     return -1;
