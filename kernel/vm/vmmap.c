@@ -216,6 +216,52 @@ vmmap_map(vmmap_t *map, vnode_t *file, uint32_t lopage, uint32_t npages,
         return -1;
 }
 
+typedef enum {NO_OVERLAP, CASE_1, CASE_2, CASE_3, CASE_4} overlap_t;
+
+static overlap_t get_overlap_type(vmarea_t *vma, uint32_t lopage, uint32_t npages){
+
+    uint32_t vma_start = vma->vma_start;
+    uint32_t vma_end = vma->vma_end;
+
+    if (vma_end <= lopage){
+        return NO_OVERLAP;
+    }
+
+    /* non-inclusive */
+    uint32_t hipage = lopage + npages;
+
+    if (vma_start > lopage && vma_end < hipage){
+        return CASE_1;
+    } else if (vma_start > lopage){
+        return CASE_2;
+    } else if (vma_end < hipage){
+        return CASE_3;
+    } else {
+        KASSERT(vma_start <= lopage && vma_end >= hipage);
+        return CASE_4;
+    }
+}
+
+static vmarea_t *vmarea_clone(vmarea_t *old_vma){
+    vmarea_t *new_vma = vmarea_alloc();
+
+    if (new_vma == NULL){
+        return NULL;
+    }
+
+    new_vma->vma_start = -1;
+    new_vma->vma_end = -1;
+    new_vma->vma_off = old_vma->vma_off;
+
+    new_vma->vma_prot = old_vma->vma_prot;
+    new_vma->vma_flags = old_vma->vma_flags;
+
+    new_vma->vma_obj = old_vma->vma_obj;
+    new_vma->vma_obj->mmo_ops->ref(new_vma->vma_obj);
+
+    return new_vma;
+}
+
 /*
  * We have no guarantee that the region of the address space being
  * unmapped will play nicely with our list of vmareas.
@@ -248,6 +294,46 @@ vmmap_map(vmmap_t *map, vnode_t *file, uint32_t lopage, uint32_t npages,
 int
 vmmap_remove(vmmap_t *map, uint32_t lopage, uint32_t npages)
 {
+    list_link_t *currlink;
+    list_t *list = &map->vmm_list;
+
+    currlink = list->l_next;
+
+    while (currlink != list){
+        list_link_t *nextlink = currlink->l_next;
+        vmarea_t *vma = list_item(currlink, vmarea_t, vma_plink);
+
+        overlap_t overlap = get_overlap_type(vma, lopage, npages);
+
+        switch (overlap){
+            case CASE_1:; /* empty statement so this compiles */
+                vmarea_t *next_vma = vmarea_clone(vma);
+                if (next_vma == NULL){
+                    return -ENOMEM;
+                }
+                
+                next_vma->vma_start = lopage + npages;
+                next_vma->vma_end = vma->vma_end;
+
+                vma->vma_end = lopage;
+
+                vmmap_insert(vma->vma_vmmap, next_vma);
+
+            case CASE_2:
+// TODO write this 
+            case CASE_3:
+
+            case CASE_4: 
+
+            case NO_OVERLAP:
+
+            default:
+                ;
+        }
+
+        currlink = currlink->l_next;
+    }
+
         NOT_YET_IMPLEMENTED("VM: vmmap_remove");
         return -1;
 }

@@ -17,3 +17,5 @@ In general:
     what should it be, and how should we set it?
 
 -------------------
+
+in vmarea_clone, what do we do about vma_olink?
