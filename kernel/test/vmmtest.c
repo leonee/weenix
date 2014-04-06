@@ -290,10 +290,136 @@ static void test_vmmap_remove_simple(){
     vmmap_destroy(vmm);
 }
 
+static void test_case_1_edge(){
+    vmmap_t *vmm = vmmap_create();
+
+    vmarea_t zero_to_onehundred;
+    zero_to_onehundred.vma_start = 0;
+    zero_to_onehundred.vma_end = 100;
+    zero_to_onehundred.vma_off = 0;
+    zero_to_onehundred.vma_obj = NULL;
+    zero_to_onehundred.vma_prot = PROT_NONE;
+    list_link_init(&zero_to_onehundred.vma_plink);
+    zero_to_onehundred.vma_flags = MAP_SHARED;
+
+    list_insert_tail(&vmm->vmm_list, &zero_to_onehundred.vma_plink);
+
+    vmmap_remove(vmm, 1, 98);
+
+    list_link_t *currlink = (&vmm->vmm_list)->l_next;
+    vmarea_t *currarea = list_item(currlink, vmarea_t, vma_plink);
+    validate_vmarea(currarea, 0, 1, 0);
+
+    currlink = currlink->l_next;
+    currarea = list_item(currlink, vmarea_t, vma_plink);
+    validate_vmarea(currarea, 99, 100, 99);
+
+    KASSERT(currlink->l_next == &vmm->vmm_list);
+
+    vmmap_destroy(vmm);
+}
+
+static void test_case_2_edge(){
+    vmmap_t *vmm = vmmap_create();
+
+    vmarea_t onefifty_to_onesixty;
+    onefifty_to_onesixty.vma_start = 150;
+    onefifty_to_onesixty.vma_end = 160;
+    onefifty_to_onesixty.vma_off = 0;
+    list_insert_tail(&vmm->vmm_list, &onefifty_to_onesixty.vma_plink);
+
+    vmmap_remove(vmm, 159, 5);
+
+    list_link_t *currlink = (&vmm->vmm_list)->l_next;
+    vmarea_t *currarea = list_item(currlink, vmarea_t, vma_plink);
+    validate_vmarea(currarea, 150, 159, 0);
+
+    KASSERT(currlink->l_next == &vmm->vmm_list);
+
+    vmmap_destroy(vmm);
+}
+
+static void test_case_3_edge(){
+    vmmap_t *vmm = vmmap_create();
+
+    vmarea_t onesixty_to_oneseventy;
+    onesixty_to_oneseventy.vma_start = 160;
+    onesixty_to_oneseventy.vma_end = 170;
+    onesixty_to_oneseventy.vma_off = 0;
+
+    list_insert_tail(&vmm->vmm_list, &onesixty_to_oneseventy.vma_plink);
+
+    vmmap_remove(vmm, 155, 6);
+
+    list_link_t *currlink = (&vmm->vmm_list)->l_next;
+    vmarea_t *currarea = list_item(currlink, vmarea_t, vma_plink);
+    validate_vmarea(currarea, 161, 170, 1);
+
+    KASSERT(currlink->l_next == &vmm->vmm_list);
+
+    vmmap_destroy(vmm);
+}
+
+static void test_case_4_edge(){
+    vmmap_t *vmm = vmmap_create();
+
+    vmarea_t onesixty_to_oneseventy;
+    onesixty_to_oneseventy.vma_start = 160;
+    onesixty_to_oneseventy.vma_end = 170;
+    onesixty_to_oneseventy.vma_off = 0;
+
+    list_insert_tail(&vmm->vmm_list, &onesixty_to_oneseventy.vma_plink);
+
+    vmmap_remove(vmm, 160, 10);
+
+    list_link_t *currlink = (&vmm->vmm_list)->l_next;
+
+    KASSERT((&vmm->vmm_list)->l_next == &vmm->vmm_list);
+
+    vmmap_destroy(vmm);
+}
+
+static void test_no_overlap_edge(){
+    vmmap_t *vmm = vmmap_create();
+
+    vmarea_t onesixty_to_oneseventy;
+    onesixty_to_oneseventy.vma_start = 160;
+    onesixty_to_oneseventy.vma_end = 170;
+    onesixty_to_oneseventy.vma_off = 0;
+
+    list_insert_tail(&vmm->vmm_list, &onesixty_to_oneseventy.vma_plink);
+
+    vmmap_remove(vmm, 155, 5);
+
+    list_link_t *currlink = (&vmm->vmm_list)->l_next;
+    vmarea_t *currarea = list_item(currlink, vmarea_t, vma_plink);
+    validate_vmarea(currarea, 160, 170, 0);
+
+    KASSERT(currlink->l_next == &vmm->vmm_list);
+
+    vmmap_remove(vmm, 170, 10);
+
+    list_link_t *currlink2 = (&vmm->vmm_list)->l_next;
+    vmarea_t *currarea2 = list_item(currlink2, vmarea_t, vma_plink);
+    validate_vmarea(currarea2, 160, 170, 0);
+
+    KASSERT(currlink2->l_next == &vmm->vmm_list);
+
+    vmmap_destroy(vmm);
+}
+
 static void test_vmmap_remove(){
     dbg(DBG_TEST, "starting vmmap_remove tests\n");
 
     test_vmmap_remove_simple();
+
+    dbg(DBG_TEST, "starting vmmap_remove edge case tests\n");
+    test_case_1_edge();
+    test_case_2_edge();
+    test_case_3_edge();
+    test_case_4_edge();
+    test_no_overlap_edge();
+    dbg(DBG_TEST, "vmmap_remove edge case tests passed\n");
 
     dbg(DBG_TEST, "vmmap_remove() tests passed\n");
 }
