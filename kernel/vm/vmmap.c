@@ -84,7 +84,33 @@ vmmap_destroy(vmmap_t *map)
 void
 vmmap_insert(vmmap_t *map, vmarea_t *newvma)
 {
-        NOT_YET_IMPLEMENTED("VM: vmmap_insert");
+    KASSERT(newvma->vma_start < newvma->vma_end && "bad vmarea bounds");
+    KASSERT(newvma->vma_prot == PROT_NONE
+         || newvma->vma_prot == PROT_READ
+         || newvma->vma_prot == PROT_WRITE
+         || newvma->vma_prot == PROT_EXEC
+         || newvma->vma_prot == (PROT_READ | PROT_WRITE)
+         || newvma->vma_prot == (PROT_READ | PROT_EXEC)
+         || newvma->vma_prot == (PROT_WRITE | PROT_EXEC)
+         || newvma->vma_prot == (PROT_READ | PROT_WRITE | PROT_EXEC));
+    KASSERT(newvma->vma_flags == MAP_SHARED || newvma->vma_flags == MAP_PRIVATE);
+    KASSERT(newvma->vma_vmmap == NULL);
+    KASSERT(!(list_link_is_linked(&newvma->vma_plink)));
+
+    newvma->vma_vmmap = map;
+
+    list_t *list = &map->vmm_list;
+    list_link_t *link = list->l_next;
+    for (link = list->l_next; link != list; link = link->l_next){
+        vmarea_t *vma = list_item(link, vmarea_t, vma_plink);
+        if (vma->vma_end >= newvma->vma_end){
+            list_insert_before(link, &newvma->vma_plink);
+            return;
+        }
+    }
+
+    /* if we get here, it goes at the end */
+    list_insert_tail(list, &newvma->vma_plink);
 }
 
 /* returns one if the two vm areas are contiguous */
