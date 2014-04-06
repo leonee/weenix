@@ -4,6 +4,8 @@
 
 #include "vm/vmmap.h"
 
+#include "mm/mman.h"
+
 static void test_vmm_find_range_simple(){
     dbg(DBG_TEST, "beginning simple vmm_find_range tests\n");
 
@@ -207,6 +209,10 @@ static void test_vmmap_remove_simple(){
     zero_to_onehundred.vma_start = 0;
     zero_to_onehundred.vma_end = 100;
     zero_to_onehundred.vma_off = 10;
+    zero_to_onehundred.vma_obj = NULL;
+    zero_to_onehundred.vma_prot = PROT_NONE;
+    list_link_init(&zero_to_onehundred.vma_plink);
+    zero_to_onehundred.vma_flags = MAP_SHARED;
 
     vmarea_t onefifty_to_onesixty;
     onefifty_to_onesixty.vma_start = 150;

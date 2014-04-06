@@ -97,8 +97,6 @@ vmmap_insert(vmmap_t *map, vmarea_t *newvma)
     KASSERT(newvma->vma_vmmap == NULL);
     KASSERT(!(list_link_is_linked(&newvma->vma_plink)));
 
-    newvma->vma_vmmap = map;
-
     list_t *list = &map->vmm_list;
     list_link_t *link = list->l_next;
     for (link = list->l_next; link != list; link = link->l_next){
@@ -256,14 +254,14 @@ static overlap_t get_overlap_type(vmarea_t *vma, uint32_t lopage, uint32_t npage
     /* non-inclusive */
     uint32_t hipage = lopage + npages;
 
-    if (vma_start > lopage && vma_end < hipage){
+    if (vma_start < lopage && vma_end > hipage){
         return CASE_1;
     } else if (vma_start > lopage){
         return CASE_2;
     } else if (vma_end < hipage){
         return CASE_3;
     } else {
-        KASSERT(vma_start <= lopage && vma_end >= hipage);
+        KASSERT(vma_start >= lopage && vma_end <= hipage);
         return CASE_4;
     }
 }
@@ -283,7 +281,12 @@ static vmarea_t *vmarea_clone(vmarea_t *old_vma){
     new_vma->vma_flags = old_vma->vma_flags;
 
     new_vma->vma_obj = old_vma->vma_obj;
-    new_vma->vma_obj->mmo_ops->ref(new_vma->vma_obj);
+
+    if (new_vma->vma_obj != NULL){
+        new_vma->vma_obj->mmo_ops->ref(new_vma->vma_obj);
+    }
+
+    list_link_init(&new_vma->vma_plink);
 
     return new_vma;
 }
@@ -346,7 +349,7 @@ vmmap_remove(vmmap_t *map, uint32_t lopage, uint32_t npages)
 
                 vma->vma_end = lopage;
 
-                vmmap_insert(vma->vma_vmmap, next_vma);
+                vmmap_insert(map, next_vma);
                 break;
             case CASE_2:
                 vma->vma_end = (lopage + npages);
