@@ -197,6 +197,12 @@ static void validate_vmarea(vmarea_t *v, uint32_t start, uint32_t end, uint32_t 
     dbg(DBG_TEST, "attempting to validate start == %d, end == %d, off == %d\n", 
             start, end, off);
 
+    if (v->vma_start != start || v->vma_end != end || v->vma_off != off){
+        dbg(DBG_TEST, "actual start: %d\n", v->vma_start);
+        dbg(DBG_TEST, "actual end: %d\n", v->vma_end);
+        dbg(DBG_TEST, "actual offset: %d\n", v->vma_off);
+    }
+
     KASSERT(v->vma_start == start);
     KASSERT(v->vma_end == end);
     KASSERT(v->vma_off == off);
@@ -234,10 +240,9 @@ static void test_vmmap_remove_simple(){
     list_insert_tail(&vmm->vmm_list, &onesixty_to_oneseventy.vma_plink);
     list_insert_tail(&vmm->vmm_list, &oneseventy_to_oneeighty.vma_plink);
 
-    vmmap_remove(vmm, 30, 60);
-    vmmap_remove(vmm, 155, 175);
+    vmmap_remove(vmm, 30, 30); /* remove (30, 60] */
 
-    /* should be (0, 30], (60, 100], (150, 155], (175, 180] */
+    /* should be (0, 30], (60, 100], (150, 160], (160, 170], (170, 180] */
     list_link_t *curr_link = (&vmm->vmm_list)->l_next;
     vmarea_t *currarea = list_item(curr_link, vmarea_t, vma_plink);
     validate_vmarea(currarea, 0, 30, 10);
@@ -248,13 +253,39 @@ static void test_vmmap_remove_simple(){
 
     curr_link = curr_link->l_next;
     currarea = list_item(curr_link, vmarea_t, vma_plink);
-    validate_vmarea(currarea, 150, 155, 25);
+    validate_vmarea(currarea, 150, 160, 20);
   
     curr_link = curr_link->l_next;
     currarea = list_item(curr_link, vmarea_t, vma_plink);
-    validate_vmarea(currarea, 175, 180, 5);
+    validate_vmarea(currarea, 160, 170, 0);
 
-    KASSERT(curr_link->l_next == &vmm->vmm_list);
+    curr_link = curr_link->l_next;
+    currarea = list_item(curr_link, vmarea_t, vma_plink);
+    validate_vmarea(currarea, 170, 180, 0);
+
+    curr_link = NULL;
+    currarea = NULL;
+
+    vmmap_remove(vmm, 155, 20); /* remove (155, 175] */
+
+    /* should be (0, 30], (60, 100], (150, 155], (175, 180] */
+    list_link_t *curr_link2 = (&vmm->vmm_list)->l_next;
+    vmarea_t *currarea2 = list_item(curr_link2, vmarea_t, vma_plink);
+    validate_vmarea(currarea2, 0, 30, 10);
+
+    curr_link2 = curr_link2->l_next;
+    currarea2 = list_item(curr_link2, vmarea_t, vma_plink);
+    validate_vmarea(currarea2, 60, 100, 70);
+
+    curr_link2 = curr_link2->l_next;
+    currarea2 = list_item(curr_link2, vmarea_t, vma_plink);
+    validate_vmarea(currarea2, 150, 155, 20);
+  
+    curr_link2 = curr_link2->l_next;
+    currarea2 = list_item(curr_link2, vmarea_t, vma_plink);
+    validate_vmarea(currarea2, 175, 180, 5);
+
+    KASSERT(curr_link2->l_next == &vmm->vmm_list);
 
     vmmap_destroy(vmm);
 }

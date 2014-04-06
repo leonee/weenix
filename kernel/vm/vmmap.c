@@ -247,18 +247,18 @@ static overlap_t get_overlap_type(vmarea_t *vma, uint32_t lopage, uint32_t npage
     uint32_t vma_start = vma->vma_start;
     uint32_t vma_end = vma->vma_end;
 
-    if (vma_end <= lopage){
-        return NO_OVERLAP;
-    }
-
     /* non-inclusive */
     uint32_t hipage = lopage + npages;
 
+    if (vma_end <= lopage || vma_start >= hipage){
+        return NO_OVERLAP;
+    }
+
     if (vma_start < lopage && vma_end > hipage){
         return CASE_1;
-    } else if (vma_start > lopage){
+    } else if (vma_start < lopage && vma_end > lopage && vma_end <= hipage){
         return CASE_2;
-    } else if (vma_end < hipage){
+    } else if (vma_start >= lopage  && vma_start < hipage && vma_end > hipage){
         return CASE_3;
     } else {
         KASSERT(vma_start >= lopage && vma_end <= hipage);
@@ -346,17 +346,18 @@ vmmap_remove(vmmap_t *map, uint32_t lopage, uint32_t npages)
                 
                 next_vma->vma_start = lopage + npages;
                 next_vma->vma_end = vma->vma_end;
+                next_vma->vma_off = vma->vma_off + (lopage + npages - vma->vma_start);
 
                 vma->vma_end = lopage;
 
                 vmmap_insert(map, next_vma);
                 break;
             case CASE_2:
-                vma->vma_end = (lopage + npages);
+                vma->vma_end = lopage;
                 break;
             case CASE_3:
-                vma->vma_off += (lopage - vma->vma_start);
-                vma->vma_start = lopage;
+                vma->vma_off += (lopage + npages - vma->vma_start);
+                vma->vma_start = lopage + npages;
                 break; 
             case CASE_4: 
                 list_remove(currlink);
