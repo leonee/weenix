@@ -294,10 +294,8 @@ static vmarea_t *vmarea_clone(vmarea_t *old_vma){
 int
 vmmap_remove(vmmap_t *map, uint32_t lopage, uint32_t npages)
 {
-    list_link_t *currlink;
     list_t *list = &map->vmm_list;
-
-    currlink = list->l_next;
+    list_link_t *currlink = list->l_next;
 
     while (currlink != list){
         list_link_t *nextlink = currlink->l_next;
@@ -306,6 +304,11 @@ vmmap_remove(vmmap_t *map, uint32_t lopage, uint32_t npages)
         overlap_t overlap = get_overlap_type(vma, lopage, npages);
 
         switch (overlap){
+            case NO_OVERLAP:
+                if (vma->vma_start > lopage + npages){
+                    return 0;
+                }
+                break;
             case CASE_1:; /* empty statement so this compiles */
                 vmarea_t *next_vma = vmarea_clone(vma);
                 if (next_vma == NULL){
@@ -318,24 +321,21 @@ vmmap_remove(vmmap_t *map, uint32_t lopage, uint32_t npages)
                 vma->vma_end = lopage;
 
                 vmmap_insert(vma->vma_vmmap, next_vma);
-
+                break;
             case CASE_2:
-// TODO write this 
+                vma->vma_end = (lopage + npages);
+                break;
             case CASE_3:
-
+                vma->vma_off += (lopage - vma->vma_start);
+                vma->vma_start = lopage;
+                break; 
             case CASE_4: 
-
-            case NO_OVERLAP:
-
-            default:
-                ;
+                list_remove(currlink);
         }
-
-        currlink = currlink->l_next;
+        currlink = nextlink;
     }
-
-        NOT_YET_IMPLEMENTED("VM: vmmap_remove");
-        return -1;
+    
+    return 0;
 }
 
 /*

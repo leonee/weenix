@@ -19,3 +19,6 @@ In general:
 -------------------
 
 in vmarea_clone, what do we do about vma_olink?
+
+in vmmap_remove()
+    - what should this return?

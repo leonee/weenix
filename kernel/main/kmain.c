@@ -335,9 +335,9 @@ static void destroy_kshell_commands(){
 static void *
 initproc_run(int arg1, void *arg2)
 {
-    /*run_vmm_tests();*/
+    run_vmm_tests();
 
-    kernel_execve("/sbin/init", NULL, NULL);
+    /*kernel_execve("/sbin/init", NULL, NULL);*/
     
     /*run_proc_tests();*/
     /*run_tty_tests();*/
