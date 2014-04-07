@@ -15,7 +15,7 @@
 
 #define READSIZE (S5_NDIRECT_BLOCKS + 1) * S5_BLOCK_SIZE
 
-#define INODES_IN_USE 9
+#define INODES_IN_USE 11
 #define FREE_INODES (240 - INODES_IN_USE)
 
 /* thanks Scala :) printf("{\"" + (1 to 100).mkString("\",\"") + "}\"") */
