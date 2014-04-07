@@ -344,14 +344,14 @@ initproc_run(int arg1, void *arg2)
     /*run_memdev_tests();*/
     /*[>run_ata_tests();<]*/
 
-    /*int i;*/
+   /* int i;*/
     /*for (i = 0; i < 4; i++){*/
         /*run_s5fs_tests();*/
     /*}*/
     
     /*vfstest_main(1, NULL);   */
     
-/*    kshell_add_command("proctest", proctests, "tests proc code");*/
+    /*kshell_add_command("proctest", proctests, "tests proc code");*/
 
     /*kshell_add_command("ar", kshell_ata_read, "tests ata_read");*/
     /*kshell_add_command("aw", kshell_ata_write, "tests ata_write");*/
