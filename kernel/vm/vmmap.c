@@ -207,6 +207,30 @@ vmmap_clone(vmmap_t *map)
         return NULL;
 }
 
+static void assert_valid_mmap_input(vmmap_t *map, int prot, int flags, off_t off,
+        int dir)
+{
+    KASSERT(map != NULL);
+    KASSERT(prot == PROT_NONE
+         || prot == PROT_READ
+         || prot == PROT_WRITE
+         || prot == PROT_EXEC
+         || prot == (PROT_READ | PROT_WRITE)
+         || prot == (PROT_READ | PROT_EXEC)
+         || prot == (PROT_WRITE | PROT_EXEC)
+         || prot == (PROT_READ | PROT_WRITE | PROT_EXEC));
+
+    KASSERT(((flags & MAP_SHARED) || (flags & MAP_PRIVATE)) && !(flags & MAP_TYPE));
+
+    KASSERT(((flags & MAP_FIXED) || (flags & MAP_ANON)) &&
+            !(flags & MAP_FIXED && (flags & MAP_ANON)));
+
+    KASSERT(off % PAGE_SIZE == 0);
+
+    KASSERT(dir == VMMAP_DIR_LOHI || dir == VMMAP_DIR_HILO);
+
+}
+
 /* Insert a mapping into the map starting at lopage for npages pages.
  * If lopage is zero, we will find a range of virtual addresses in the
  * process that is big enough, by using vmmap_find_range with the same
@@ -236,8 +260,45 @@ int
 vmmap_map(vmmap_t *map, vnode_t *file, uint32_t lopage, uint32_t npages,
           int prot, int flags, off_t off, int dir, vmarea_t **new)
 {
-        NOT_YET_IMPLEMENTED("VM: vmmap_map");
-        return -1;
+    if (flags & MAP_PRIVATE){
+        panic("private mappings not yet implemented");
+    }
+
+    if (file == NULL){
+        panic("anonymous objects not yet implemented");
+    }
+
+    assert_valid_mmap_input(map, prot, flags, off, dir);
+    
+    vmarea_t *vma = vmarea_alloc();
+
+    if (vma == NULL){
+        return (int) MAP_FAILED;
+    }
+
+    int starting_page = lopage;
+
+    if (lopage == 0){
+        page_to_insert = vmmap_find_range(map, npages, dir);
+        if (page_to_insert < 0){
+            return (int) MAP_FAILED;
+        }
+    }
+
+    vma->vma_start = starting_page;
+    vma->vma_end = starting_page + npages;
+    vma->vma_off = off / PAGE_SIZE;
+
+    vma->vma_prot = prot;
+    vma->vma_flags = flags;
+
+    vma->vma_vmmap = map;
+    
+    // TODO
+    // possible set remaining fields other than obj, and then call mmap
+    vmmap_remove(map, lopage, npages);
+
+    return -1;
 }
 
 typedef enum {NO_OVERLAP, CASE_1, CASE_2, CASE_3, CASE_4} overlap_t;

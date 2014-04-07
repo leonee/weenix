@@ -22,3 +22,11 @@ in vmarea_clone, what do we do about vma_olink?
 
 in vmmap_remove()
     - what should this return?
+
+in vmmap_destroy()
+    - what does this even mean?
+
+in vmmap_map()
+    - do we really just return MAP_FAILED if it failed?
+    - how do we get vma_off? Is it (off / PAGE_SIZE) ?
+    - what do do about vma_olink?
