@@ -93,7 +93,10 @@ vmmap_insert(vmmap_t *map, vmarea_t *newvma)
          || newvma->vma_prot == (PROT_READ | PROT_EXEC)
          || newvma->vma_prot == (PROT_WRITE | PROT_EXEC)
          || newvma->vma_prot == (PROT_READ | PROT_WRITE | PROT_EXEC));
-    KASSERT(newvma->vma_flags == MAP_SHARED || newvma->vma_flags == MAP_PRIVATE);
+
+    int map_type = newvma->vma_flags & MAP_TYPE;
+    KASSERT(map_type == MAP_SHARED || map_type == MAP_PRIVATE);
+    
     KASSERT(newvma->vma_vmmap == NULL);
     KASSERT(!(list_link_is_linked(&newvma->vma_plink)));
 
@@ -109,6 +112,8 @@ vmmap_insert(vmmap_t *map, vmarea_t *newvma)
 
     /* if we get here, it goes at the end */
     list_insert_tail(list, &newvma->vma_plink);
+
+    newvma->vma_vmmap = map;
 }
 
 /* returns one if the two vm areas are contiguous */
@@ -296,7 +301,9 @@ vmmap_map(vmmap_t *map, vnode_t *file, uint32_t lopage, uint32_t npages,
     vma->vma_prot = prot;
     vma->vma_flags = flags;
 
-    vma->vma_vmmap = map;
+    /*vma->vma_vmmap = map;*/
+    list_link_init(&vma->vma_plink);
+    list_link_init(&vma->vma_olink);
     
     mmobj_t *new_mmobj;
 

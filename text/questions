@@ -12,3 +12,6 @@ in s5_seek_to_block()
 
 in vmmap_map()
     - do we need to do anything about vma_olink here?
+    - is it okay to not set vma->vma_vmmap before calling
+      mmap? we're also told to set the vma_vmmap field
+      in insert.
