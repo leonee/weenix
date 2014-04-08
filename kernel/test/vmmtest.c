@@ -300,9 +300,15 @@ static void test_case_1_edge(){
     zero_to_onehundred.vma_obj = NULL;
     zero_to_onehundred.vma_prot = PROT_NONE;
     list_link_init(&zero_to_onehundred.vma_plink);
+    list_link_init(&zero_to_onehundred.vma_olink);
     zero_to_onehundred.vma_flags = MAP_SHARED;
 
     list_insert_tail(&vmm->vmm_list, &zero_to_onehundred.vma_plink);
+
+    list_t throwaway_list;
+    list_init(&throwaway_list);
+
+    list_insert_tail(&throwaway_list, &zero_to_onehundred.vma_olink);
 
     vmmap_remove(vmm, 1, 98);
 
