@@ -4,29 +4,11 @@ in vfs_syscall functions
 in s5_seek_to_block()
     - what to do if seekptr is great than file length
       and we're not allocating?
+        - return 0
     - where do we use pin() and unpin()?
-
-in s5_link()
-    - why do we need to call s5_find_dirent()?
-
-in s5_read/delete_vnode()
-    - should we dirty the inode?
-
-In general:
-    - Should the pageoutdaemon have a cwd? If so,
-    what should it be, and how should we set it?
+        - pin before pframe_dirty(), don't unpin until after
 
 -------------------
 
-in vmarea_clone, what do we do about vma_olink?
-
-in vmmap_remove()
-    - what should this return?
-
-in vmmap_destroy()
-    - what does this even mean?
-
 in vmmap_map()
-    - do we really just return MAP_FAILED if it failed?
-    - how do we get vma_off? Is it (off / PAGE_SIZE) ?
-    - what do do about vma_olink?
+    - do we need to do anything about vma_olink here?

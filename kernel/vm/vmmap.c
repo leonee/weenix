@@ -273,32 +273,54 @@ vmmap_map(vmmap_t *map, vnode_t *file, uint32_t lopage, uint32_t npages,
     vmarea_t *vma = vmarea_alloc();
 
     if (vma == NULL){
-        return (int) MAP_FAILED;
+        return -ENOMEM;
     }
 
     int starting_page = lopage;
 
     if (lopage == 0){
-        page_to_insert = vmmap_find_range(map, npages, dir);
-        if (page_to_insert < 0){
-            return (int) MAP_FAILED;
+        starting_page = vmmap_find_range(map, npages, dir);
+        if (starting_page < 0){
+            vmarea_free(vma);
+            return starting_page;
         }
     }
 
     vma->vma_start = starting_page;
     vma->vma_end = starting_page + npages;
-    vma->vma_off = off / PAGE_SIZE;
+    vma->vma_off = ADDR_TO_PN(off);
 
     vma->vma_prot = prot;
     vma->vma_flags = flags;
 
     vma->vma_vmmap = map;
     
-    // TODO
-    // possible set remaining fields other than obj, and then call mmap
-    vmmap_remove(map, lopage, npages);
+    mmobj_t *new_mmobj;
 
-    return -1;
+    int mmap_res = file->vn_ops->mmap(file, vma, &new_mmobj);
+
+    if (mmap_res < 0){
+        vmarea_free(vma);
+        return mmap_res;
+    }
+
+    int remove_res = vmmap_remove(map, starting_page, npages);
+
+    if (remove_res < 0){
+        vmarea_free(vma);
+        return remove_res;
+    }
+
+    vma->vma_obj = new_mmobj;
+    new_mmobj->mmo_ops->ref(new_mmobj);
+
+    vmmap_insert(map, vma);
+
+    if (new != NULL){
+        *new = vma;
+    }
+
+    return 0;
 }
 
 typedef enum {NO_OVERLAP, CASE_1, CASE_2, CASE_3, CASE_4} overlap_t;
@@ -348,6 +370,8 @@ static vmarea_t *vmarea_clone(vmarea_t *old_vma){
     }
 
     list_link_init(&new_vma->vma_plink);
+    list_link_init(&new_vma->vma_olink);
+    list_insert_before(&old_vma->vma_olink, &new_vma->vma_olink);
 
     return new_vma;
 }
