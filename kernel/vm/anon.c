@@ -39,7 +39,8 @@ static mmobj_ops_t anon_mmobj_ops = {
 void
 anon_init()
 {
-        NOT_YET_IMPLEMENTED("VM: anon_init");
+    anon_allocator = slab_allocator_create("anon", sizeof(mmobj_t));
+    KASSERT(anon_allocator != NULL && "failed to vreate anon allocator!");
 }
 
 /*

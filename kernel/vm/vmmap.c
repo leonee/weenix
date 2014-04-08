@@ -307,11 +307,15 @@ vmmap_map(vmmap_t *map, vnode_t *file, uint32_t lopage, uint32_t npages,
     
     mmobj_t *new_mmobj;
 
-    int mmap_res = file->vn_ops->mmap(file, vma, &new_mmobj);
+    if (file != NULL){
+        int mmap_res = file->vn_ops->mmap(file, vma, &new_mmobj);
 
-    if (mmap_res < 0){
-        vmarea_free(vma);
-        return mmap_res;
+        if (mmap_res < 0){
+            vmarea_free(vma);
+            return mmap_res;
+        }
+    } else {
+
     }
 
     int remove_res = vmmap_remove(map, starting_page, npages);
