@@ -403,9 +403,8 @@ s5fs_write(vnode_t *vnode, off_t offset, const void *buf, size_t len)
 static int
 s5fs_mmap(vnode_t *file, vmarea_t *vma, mmobj_t **ret)
 {
-        NOT_YET_IMPLEMENTED("VM: s5fs_mmap");
-
-        return 0;
+    *ret = &file->vn_mmobj;
+    return 0;
 }
 
 /* checks the state of a new vnode, created with a call to vget

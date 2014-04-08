@@ -207,8 +207,8 @@ vmmap_clone(vmmap_t *map)
         return NULL;
 }
 
-static void assert_valid_mmap_input(vmmap_t *map, int prot, int flags, off_t off,
-        int dir)
+static void assert_valid_mmap_input(vmmap_t *map, int lopage, int prot, int flags,
+        off_t off, int dir)
 {
     KASSERT(map != NULL);
     KASSERT(prot == PROT_NONE
@@ -220,14 +220,17 @@ static void assert_valid_mmap_input(vmmap_t *map, int prot, int flags, off_t off
          || prot == (PROT_WRITE | PROT_EXEC)
          || prot == (PROT_READ | PROT_WRITE | PROT_EXEC));
 
-    KASSERT(((flags & MAP_SHARED) || (flags & MAP_PRIVATE)) && !(flags & MAP_TYPE));
+    int map_type = flags & MAP_TYPE;
+    KASSERT(map_type == MAP_SHARED || map_type == MAP_PRIVATE);
 
     KASSERT(((flags & MAP_FIXED) || (flags & MAP_ANON)) &&
             !(flags & MAP_FIXED && (flags & MAP_ANON)));
 
     KASSERT(off % PAGE_SIZE == 0);
 
-    KASSERT(dir == VMMAP_DIR_LOHI || dir == VMMAP_DIR_HILO);
+    if (lopage == 0){
+        KASSERT(dir == VMMAP_DIR_LOHI || dir == VMMAP_DIR_HILO);
+    }
 
 }
 
@@ -260,15 +263,15 @@ int
 vmmap_map(vmmap_t *map, vnode_t *file, uint32_t lopage, uint32_t npages,
           int prot, int flags, off_t off, int dir, vmarea_t **new)
 {
+    assert_valid_mmap_input(map, lopage, prot, flags, off, dir);
+
     if (flags & MAP_PRIVATE){
-        panic("private mappings not yet implemented");
+        dbg(DBG_VM, "MAP_PRIVATE is specified. This flag will be ignored\n");
     }
 
     if (file == NULL){
         panic("anonymous objects not yet implemented");
     }
-
-    assert_valid_mmap_input(map, prot, flags, off, dir);
     
     vmarea_t *vma = vmarea_alloc();
 
