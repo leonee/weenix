@@ -69,7 +69,7 @@ anon_create()
 static void
 anon_ref(mmobj_t *o)
 {
-        NOT_YET_IMPLEMENTED("VM: anon_ref");
+    o->mmo_refcount++;
 }
 
 /*
