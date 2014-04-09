@@ -15,3 +15,6 @@ in vmmap_map()
     - is it okay to not set vma->vma_vmmap before calling
       mmap? we're also told to set the vma_vmmap field
       in insert.
+
+in anon_put()
+    - what does it mean to uncache all of the object's pages?

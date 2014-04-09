@@ -40,7 +40,7 @@ void
 anon_init()
 {
     anon_allocator = slab_allocator_create("anon", sizeof(mmobj_t));
-    KASSERT(anon_allocator != NULL && "failed to vreate anon allocator!");
+    KASSERT(anon_allocator != NULL && "failed to create anon allocator!");
 }
 
 /*
@@ -83,7 +83,19 @@ anon_ref(mmobj_t *o)
 static void
 anon_put(mmobj_t *o)
 {
-        NOT_YET_IMPLEMENTED("VM: anon_put");
+    KASSERT(o->mmo_refcount > o->mmo_nrespages && "refcount == nrespages already!");
+    KASSERT(o->mmo_nrespages >= 0);
+
+    o->mmo_refcount--;
+
+    if (o->mmo_refcount == o->mmo_nrespages){
+        pframe_t *iterator;
+        list_iterate_begin(&o->mmo_respages, iterator, pframe_t, pf_olink){
+            pframe_unpin(iterator);
+        } list_iterate_end();
+
+        slab_obj_free(anon_allocator, o);
+    }
 }
 
 /* Get the corresponding page from the mmobj. No special handling is
