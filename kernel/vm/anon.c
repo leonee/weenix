@@ -89,9 +89,10 @@ anon_put(mmobj_t *o)
     o->mmo_refcount--;
 
     if (o->mmo_refcount == o->mmo_nrespages){
-        pframe_t *iterator;
-        list_iterate_begin(&o->mmo_respages, iterator, pframe_t, pf_olink){
-            pframe_unpin(iterator);
+        pframe_t *p;
+        list_iterate_begin(&o->mmo_respages, p, pframe_t, pf_olink){
+            pframe_unpin(p);
+            tlb_flush_range((uintptr_t) p->pf_addr, PAGE_SIZE);
         } list_iterate_end();
 
         slab_obj_free(anon_allocator, o);
@@ -103,8 +104,7 @@ anon_put(mmobj_t *o)
 static int
 anon_lookuppage(mmobj_t *o, uint32_t pagenum, int forwrite, pframe_t **pf)
 {
-        NOT_YET_IMPLEMENTED("VM: anon_lookuppage");
-        return -1;
+    return pframe_get(0, pagenum, pf);
 }
 
 /* The following three functions should not be difficult. */
@@ -112,20 +112,18 @@ anon_lookuppage(mmobj_t *o, uint32_t pagenum, int forwrite, pframe_t **pf)
 static int
 anon_fillpage(mmobj_t *o, pframe_t *pf)
 {
-        NOT_YET_IMPLEMENTED("VM: anon_fillpage");
-        return 0;
+    memset(pf->pf_addr, 0, PAGE_SIZE);
+    return 0;
 }
 
 static int
 anon_dirtypage(mmobj_t *o, pframe_t *pf)
 {
-        NOT_YET_IMPLEMENTED("VM: anon_dirtypage");
-        return -1;
+    return 0;
 }
 
 static int
 anon_cleanpage(mmobj_t *o, pframe_t *pf)
 {
-        NOT_YET_IMPLEMENTED("VM: anon_cleanpage");
-        return -1;
+    return 0;
 }

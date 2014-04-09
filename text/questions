@@ -18,3 +18,10 @@ in vmmap_map()
 
 in anon_put()
     - what does it mean to uncache all of the object's pages?
+      Flush them from the TLB?
+
+in anon_lookuppage()
+    - what should we return if we can't find the page?
+
+TODO 
+    locking in s5fs.c :(
