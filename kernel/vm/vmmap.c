@@ -197,8 +197,14 @@ vmmap_find_range(vmmap_t *map, uint32_t npages, int dir)
 vmarea_t *
 vmmap_lookup(vmmap_t *map, uint32_t vfn)
 {
-        NOT_YET_IMPLEMENTED("VM: vmmap_lookup");
-        return NULL;
+    vmarea_t *curr;
+    list_iterate_begin(&map->vmm_list, curr, vmarea_t, vma_plink){
+        if (curr->vma_start <= vfn && curr->vma_end > vfn){
+            return curr;
+        }
+    } list_iterate_end();
+    
+    return NULL;
 }
 
 /* Allocates a new vmmap containing a new vmarea for each area in the
@@ -274,10 +280,6 @@ vmmap_map(vmmap_t *map, vnode_t *file, uint32_t lopage, uint32_t npages,
         dbg(DBG_VM, "MAP_PRIVATE is specified. This flag will be ignored\n");
     }
 
-    if (file == NULL){
-        panic("anonymous objects not yet implemented");
-    }
-    
     vmarea_t *vma = vmarea_alloc();
 
     if (vma == NULL){
