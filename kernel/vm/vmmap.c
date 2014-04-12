@@ -69,12 +69,24 @@ vmmap_create(void)
     return vmm;
 }
 
+void vmarea_cleanup(vmarea_t *vma){
+    vma->vma_obj->mmo_ops->put(vma->vma_obj);
+    list_remove(&vma->vma_plink);
+    list_remove(&vma->vma_olink);
+    vmarea_free(vma);
+}
+
 /* Removes all vmareas from the address space and frees the
  * vmmap struct. */
 void
 vmmap_destroy(vmmap_t *map)
 {
-        NOT_YET_IMPLEMENTED("VM: vmmap_destroy");
+    vmarea_t *curr;
+    list_iterate_begin(&map->vmm_list, curr, vmarea_t, vma_plink){
+        vmarea_cleanup(curr);
+    } list_iterate_end();
+
+    slab_obj_free(vmmap_allocator, map);
 }
 
 /* Add a vmarea to an address space. Assumes (i.e. asserts to some extent)

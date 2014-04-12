@@ -337,7 +337,9 @@ initproc_run(int arg1, void *arg2)
 {
     /*run_vmm_tests();*/
 
-    kernel_execve("/usr/bin/segfault", NULL, NULL);
+    char *empty_args[1] = {NULL};
+    char *empty_envp[1] = {NULL};
+    kernel_execve("/usr/bin/segfault", empty_args, empty_envp);
     
     /*run_proc_tests();*/
     /*run_tty_tests();*/

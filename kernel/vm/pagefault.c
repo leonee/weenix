@@ -51,5 +51,6 @@
 void
 handle_pagefault(uintptr_t vaddr, uint32_t cause)
 {
+    panic("woo-hoo!");
         NOT_YET_IMPLEMENTED("VM: handle_pagefault");
 }

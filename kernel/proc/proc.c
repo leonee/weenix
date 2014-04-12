@@ -161,6 +161,16 @@ proc_create(char *name)
     }
 #endif
 
+#ifdef __VM__
+    p->p_vmmap = vmmap_create();
+
+    if (p->p_vmmap == NULL){
+        panic("congratulations! You kicked the can down the road and now have to deal with this case. Just roll back everything you've done (probably");
+    }
+
+    p->p_vmmap->vmm_proc = p;
+#endif
+
     return p;
 }
 
