@@ -317,7 +317,11 @@ vmmap_map(vmmap_t *map, vnode_t *file, uint32_t lopage, uint32_t npages,
             return mmap_res;
         }
     } else {
-
+        new_mmobj = anon_create();
+        if (new_mmobj == NULL){
+            vmarea_free(vma);
+            return -ENOSPC;
+        }
     }
 
     int remove_res = vmmap_remove(map, starting_page, npages);
@@ -525,7 +529,7 @@ int
 vmmap_write(vmmap_t *map, void *vaddr, const void *buf, size_t count)
 {
     uint32_t start_vfn = ADDR_TO_PN(vaddr);
-    uint32_t end_vfn = ADDR_TO_PN((uint32_t) vaddr + (count / PAGE_SIZE));
+    uint32_t end_vfn = ADDR_TO_PN((uint32_t) vaddr + (count / PAGE_SIZE)) + 1;
 
     uint32_t curr_vfn = start_vfn;
 
@@ -538,7 +542,7 @@ vmmap_write(vmmap_t *map, void *vaddr, const void *buf, size_t count)
         uint32_t i;
         for (i = 0; i < pages_to_write; i++){
             pframe_t *p;
-            int get_res = pframe_get(curr->vma_obj, curr->vma_start + i, &p);
+            int get_res = pframe_get(curr->vma_obj, curr->vma_off + i, &p);
 
             if (get_res < 0){
                 return get_res;
