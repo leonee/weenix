@@ -494,6 +494,10 @@ vmmap_is_range_empty(vmmap_t *map, uint32_t startvfn, uint32_t npages)
     return 1;
 }
 
+uint32_t min(uint32_t a, uint32_t b){
+    return a < b ? a : b;
+}
+
 /* Read into 'buf' from the virtual address space of 'map' starting at
  * 'vaddr' for size 'count'. To do so, you will want to find the vmareas
  * to read from, then find the pframes within those vmareas corresponding
@@ -520,8 +524,42 @@ vmmap_read(vmmap_t *map, const void *vaddr, void *buf, size_t count)
 int
 vmmap_write(vmmap_t *map, void *vaddr, const void *buf, size_t count)
 {
-        NOT_YET_IMPLEMENTED("VM: vmmap_write");
-        return 0;
+    uint32_t start_vfn = ADDR_TO_PN(vaddr);
+    uint32_t end_vfn = ADDR_TO_PN((uint32_t) vaddr + (count / PAGE_SIZE));
+
+    uint32_t curr_vfn = start_vfn;
+
+    while (curr_vfn < end_vfn){
+        vmarea_t *curr = vmmap_lookup(map, curr_vfn);
+        KASSERT(curr != NULL);
+
+        uint32_t pages_to_write = min(curr->vma_end, end_vfn) - curr_vfn;
+
+        uint32_t i;
+        for (i = 0; i < pages_to_write; i++){
+            pframe_t *p;
+            int get_res = pframe_get(curr->vma_obj, curr->vma_start + i, &p);
+
+            if (get_res < 0){
+                return get_res;
+            }
+
+            uint32_t start_addr = (uint32_t) buf + 
+                (PAGE_SIZE * (curr_vfn + i - start_vfn));
+
+            memcpy(p->pf_addr, (void *) start_addr, PAGE_SIZE); 
+
+            int dirty_res = pframe_dirty(p);
+
+            if (dirty_res < 0){
+                return dirty_res;
+            }
+        }
+
+        curr_vfn += pages_to_write;
+    }
+
+    return 0;
 }
 
 /* a debugging routine: dumps the mappings of the given address space. */
