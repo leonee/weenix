@@ -17,6 +17,22 @@
 #include "vm/pagefault.h"
 #include "vm/vmmap.h"
 
+static int has_valid_permissions(vmarea_t *vma, uint32_t cause){
+    if (vma->vma_prot & PROT_NONE){
+        return 0;
+    }
+
+    if ((cause & FAULT_WRITE) && !(vma->vma_prot & PROT_WRITE)){
+        return 0;
+    }
+
+    if ((cause & FAULT_EXEC) && !(vma->vma_prot & PROT_EXEC)){
+        return 0;
+    }
+
+    return 1;
+}
+
 /*
  * This gets called by _pt_fault_handler in mm/pagetable.c The
  * calling function has already done a lot of error checking for
@@ -51,6 +67,56 @@
 void
 handle_pagefault(uintptr_t vaddr, uint32_t cause)
 {
-    panic("woo-hoo!");
-        NOT_YET_IMPLEMENTED("VM: handle_pagefault");
+    dbg(DBG_VM, "entering here\n");
+    KASSERT(cause & FAULT_USER);
+
+    vmarea_t *vma = vmmap_lookup(curproc->p_vmmap, ADDR_TO_PN(vaddr));
+
+    if (vma == NULL){
+        do_exit(-EFAULT);
+        panic("returned from do_exit");
+    }
+
+    if(!has_valid_permissions(vma, cause)){
+        do_exit(-EFAULT);
+        panic("returned from do_exit");
+    }
+
+    if (vma->vma_flags == MAP_PRIVATE){
+        panic("not handling that yet");
+    }
+
+    pframe_t *p;
+    int get_res = pframe_get(vma->vma_obj, ADDR_TO_PN(vaddr) -
+            vma->vma_start + vma->vma_off, &p);   
+
+    if (get_res < 0){
+        do_exit(get_res);
+        panic("returned from do_exit");
+    }
+
+    if (cause & FAULT_WRITE){
+        pframe_pin(p);
+        int dirty_res = pframe_dirty(p);
+        pframe_unpin(p);
+
+        if (dirty_res < 0){
+            do_exit(dirty_res);
+            panic("returned from do_exit");
+        }
+    }
+
+    int pdflags = PD_PRESENT /*| PD_USER*/;
+
+    int ptflags = PT_PRESENT /*| PT_USER*/;
+
+    if (cause & FAULT_WRITE){
+        pdflags |= PD_WRITE;
+        ptflags |= PT_WRITE;
+    }
+
+    /*pt_map(curproc->p_pagedir,  */
+    pt_map(curproc->p_pagedir,
+           (uintptr_t) PAGE_ALIGN_DOWN(vaddr), (uintptr_t) p->pf_addr,
+           pdflags, ptflags);
 }

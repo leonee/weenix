@@ -112,6 +112,8 @@ anon_lookuppage(mmobj_t *o, uint32_t pagenum, int forwrite, pframe_t **pf)
 static int
 anon_fillpage(mmobj_t *o, pframe_t *pf)
 {
+    /* TODO should I be pinning here? */
+    pframe_pin(pf);
     memset(pf->pf_addr, 0, PAGE_SIZE);
     return 0;
 }

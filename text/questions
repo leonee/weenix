@@ -23,5 +23,14 @@ in anon_put()
 in anon_lookuppage()
     - what should we return if we can't find the page?
 
+in handle_pagefault()
+    - when there's a segault, we just call do_exit(-EFAULT), right?
+    - how the fuck do you do this? Specifically, how do you
+      "find the correct page" and "call pt_map"?
+    - are we supposed to flush the TLB after calling pt_map?
+
+In general:
+    - where do we pin anonymous object pages?
+
 TODO 
     locking in s5fs.c :(
