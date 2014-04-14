@@ -122,8 +122,25 @@ fail:
  */
 int addr_perm(struct proc *p, const void *vaddr, int perm)
 {
-        NOT_YET_IMPLEMENTED("VM: ***none***");
+    vmarea_t *vma = vmmap_lookup(p->p_vmmap, ADDR_TO_PN(vaddr));
+
+    if (vma == NULL){
         return 0;
+    }
+
+    if ((perm & PROT_READ) && !(vma->vma_prot & PROT_READ)){
+        return 0;
+    }
+
+    if ((perm & PROT_WRITE) && !(vma->vma_prot & PROT_WRITE)){
+        return 0;
+    }
+
+    if ((perm & PROT_EXEC) && !(vma->vma_prot & PROT_EXEC)){
+        return 0;
+    }
+
+    return 1;
 }
 
 /*
