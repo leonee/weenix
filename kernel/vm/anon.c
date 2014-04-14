@@ -92,10 +92,12 @@ anon_put(mmobj_t *o)
         pframe_t *p;
         list_iterate_begin(&o->mmo_respages, p, pframe_t, pf_olink){
             pframe_unpin(p);
-            tlb_flush_range((uintptr_t) p->pf_addr, PAGE_SIZE);
+            tlb_flush((uintptr_t) p->pf_addr);
+            list_remove(&p->pf_link);
+            
         } list_iterate_end();
 
-        slab_obj_free(anon_allocator, o);
+        slab_obj_free(anon_allocator, (void *) o);
     }
 }
 
