@@ -257,6 +257,9 @@ proc_cleanup(int status)
     }
 #endif
 
+#ifdef __VM__
+    vmmap_destroy(curproc->p_vmmap);
+#endif
     sched_wakeup_on(&curproc->p_pproc->p_wait);
 }
 

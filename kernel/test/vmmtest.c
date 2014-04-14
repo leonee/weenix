@@ -52,7 +52,7 @@ static void test_vmm_find_range_simple(){
     /* range which is just above the size of the largest range of vmareas */
     KASSERT(vmmap_find_range(vmm, 12, VMMAP_DIR_LOHI) == -1);
 
-    vmmap_destroy(vmm);
+    /*vmmap_destroy(vmm);*/
 
     dbg(DBG_TEST, "simple vmm_find_range tests passed\n");
 }
@@ -97,7 +97,7 @@ static void test_vmm_find_range_complex(){
     KASSERT(vmmap_find_range(vmm, 50, VMMAP_DIR_HILO) == -1);
     KASSERT(vmmap_find_range(vmm, 100, VMMAP_DIR_HILO) == -1);
 
-    vmmap_destroy(vmm);
+    /*vmmap_destroy(vmm);*/
     
     dbg(DBG_TEST, "complex vmm_find_range tests passed\n");
 }
@@ -118,7 +118,7 @@ static void test_vmm_find_range_one_element(){
     KASSERT(vmmap_find_range(vmm, 11, VMMAP_DIR_LOHI) == -1);
     KASSERT(vmmap_find_range(vmm, 11, VMMAP_DIR_HILO) == -1);
 
-    vmmap_destroy(vmm);
+    /*vmmap_destroy(vmm);*/
 
     dbg(DBG_TEST, "vmm_find_range() one-elements tests passed\n");
 }
@@ -188,7 +188,7 @@ void test_vmmap_is_range_empty(){
     /*     **[**********]**    */
     KASSERT(vmmap_is_range_empty(vmm, 7, 23) == 0);
 
-    vmmap_destroy(vmm);
+    /*vmmap_destroy(vmm);*/
 
     dbg(DBG_TEST, "vmmap_is_range_empty() tests passed\n");
 }
@@ -287,7 +287,7 @@ static void test_vmmap_remove_simple(){
 
     KASSERT(curr_link2->l_next == &vmm->vmm_list);
 
-    vmmap_destroy(vmm);
+    /*vmmap_destroy(vmm);*/
 }
 
 static void test_case_1_edge(){
@@ -322,7 +322,7 @@ static void test_case_1_edge(){
 
     KASSERT(currlink->l_next == &vmm->vmm_list);
 
-    vmmap_destroy(vmm);
+    /*vmmap_destroy(vmm);*/
 }
 
 static void test_case_2_edge(){
@@ -342,7 +342,7 @@ static void test_case_2_edge(){
 
     KASSERT(currlink->l_next == &vmm->vmm_list);
 
-    vmmap_destroy(vmm);
+    /*vmmap_destroy(vmm);*/
 }
 
 static void test_case_3_edge(){
@@ -363,7 +363,7 @@ static void test_case_3_edge(){
 
     KASSERT(currlink->l_next == &vmm->vmm_list);
 
-    vmmap_destroy(vmm);
+    /*vmmap_destroy(vmm);*/
 }
 
 static void test_case_4_edge(){
@@ -382,7 +382,7 @@ static void test_case_4_edge(){
 
     KASSERT((&vmm->vmm_list)->l_next == &vmm->vmm_list);
 
-    vmmap_destroy(vmm);
+    /*vmmap_destroy(vmm);*/
 }
 
 static void test_no_overlap_edge(){
@@ -411,7 +411,7 @@ static void test_no_overlap_edge(){
 
     KASSERT(currlink2->l_next == &vmm->vmm_list);
 
-    vmmap_destroy(vmm);
+    /*vmmap_destroy(vmm);*/
 }
 
 static void test_vmmap_remove(){

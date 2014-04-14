@@ -86,12 +86,12 @@ handle_pagefault(uintptr_t vaddr, uint32_t cause)
         panic("not handling that yet");
     }
 
-    pframe_t *p;
-    int get_res = pframe_get(vma->vma_obj, ADDR_TO_PN(vaddr) -
-            vma->vma_start + vma->vma_off, &p);   
+    pframe_t *p; /* TODO use pframe_lookup */
+    int lookup_res = pframe_lookup(vma->vma_obj, ADDR_TO_PN(vaddr) -
+            vma->vma_start + vma->vma_off, (cause & FAULT_WRITE), &p);   
 
-    if (get_res < 0){
-        do_exit(get_res);
+    if (lookup_res < 0){
+        do_exit(lookup_res);
         panic("returned from do_exit");
     }
 
@@ -106,17 +106,18 @@ handle_pagefault(uintptr_t vaddr, uint32_t cause)
         }
     }
 
-    int pdflags = PD_PRESENT /*| PD_USER*/;
+    int pdflags = PD_PRESENT | PD_USER;
 
-    int ptflags = PT_PRESENT /*| PT_USER*/;
+    int ptflags = PT_PRESENT | PT_USER;
 
     if (cause & FAULT_WRITE){
         pdflags |= PD_WRITE;
         ptflags |= PT_WRITE;
     }
 
-    /*pt_map(curproc->p_pagedir,  */
     pt_map(curproc->p_pagedir,
-           (uintptr_t) PAGE_ALIGN_DOWN(vaddr), (uintptr_t) p->pf_addr,
-           pdflags, ptflags);
+           (uintptr_t) PAGE_ALIGN_DOWN(vaddr),
+           pt_virt_to_phys((uintptr_t) p->pf_addr), pdflags, ptflags);
+
+    /* TODO flush TLB (?) */
 }

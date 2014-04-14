@@ -72,7 +72,10 @@ vmmap_create(void)
 void vmarea_cleanup(vmarea_t *vma){
     vma->vma_obj->mmo_ops->put(vma->vma_obj);
     list_remove(&vma->vma_plink);
-    list_remove(&vma->vma_olink);
+
+    if (vma->vma_olink.l_next != NULL || vma->vma_olink.l_prev != NULL){
+        list_remove(&vma->vma_olink);
+    }
     vmarea_free(vma);
 }
 
@@ -476,8 +479,11 @@ vmmap_remove(vmmap_t *map, uint32_t lopage, uint32_t npages)
                 vma->vma_off += (lopage + npages - vma->vma_start);
                 vma->vma_start = lopage + npages;
                 break; 
-            case CASE_4: 
-                list_remove(currlink);
+            case CASE_4:; 
+                vmarea_t *vma = list_item(currlink, vmarea_t, vma_plink);
+                vmarea_cleanup(vma);
+
+                /*list_remove(currlink);*/
         }
         currlink = nextlink;
     }

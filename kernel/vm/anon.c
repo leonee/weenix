@@ -104,7 +104,7 @@ anon_put(mmobj_t *o)
 static int
 anon_lookuppage(mmobj_t *o, uint32_t pagenum, int forwrite, pframe_t **pf)
 {
-    return pframe_get(0, pagenum, pf);
+    return pframe_get(o, pagenum, pf);
 }
 
 /* The following three functions should not be difficult. */
@@ -112,7 +112,6 @@ anon_lookuppage(mmobj_t *o, uint32_t pagenum, int forwrite, pframe_t **pf)
 static int
 anon_fillpage(mmobj_t *o, pframe_t *pf)
 {
-    /* TODO should I be pinning here? */
     pframe_pin(pf);
     memset(pf->pf_addr, 0, PAGE_SIZE);
     return 0;
