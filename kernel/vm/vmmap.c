@@ -531,8 +531,34 @@ uint32_t min(uint32_t a, uint32_t b){
 int
 vmmap_read(vmmap_t *map, const void *vaddr, void *buf, size_t count)
 {
-        NOT_YET_IMPLEMENTED("VM: vmmap_read");
-        return 0;
+    uint32_t start_vfn = ADDR_TO_PN(vaddr);
+    uint32_t end_vfn = ADDR_TO_PN((uint32_t) vaddr + (count / PAGE_SIZE)) + 1;
+
+    uint32_t curr_vfn = start_vfn;
+
+    while (curr_vfn < end_vfn){
+        vmarea_t *curr = vmmap_lookup(map, curr_vfn);
+        KASSERT(curr != NULL);
+
+        uint32_t pages_to_read = min(curr->vma_end, end_vfn) - curr_vfn;
+
+        uint32_t i;
+        for (i = 0; i < pages_to_read; i++){
+            pframe_t *p;
+            int get_res = pframe_get(curr->vma_obj, curr->vma_off + i, &p);
+
+            if (get_res < 0){
+                return get_res;
+            }
+
+            uint32_t start_addr = (uint32_t) buf + 
+                (PAGE_SIZE * (curr_vfn + i - start_vfn));
+
+            memcpy((void *) start_addr, p->pf_addr, PAGE_SIZE);
+        }
+    }
+
+    return 0;
 }
 
 /* Write from 'buf' into the virtual address space of 'map' starting at

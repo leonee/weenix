@@ -16,6 +16,9 @@ in vmmap_map()
       mmap? we're also told to set the vma_vmmap field
       in insert.
 
+in vmmap_read/vmmap_write()
+    - should I be using pframe_lookup() instead of pframe_get()?
+
 in anon_put()
     - what does it mean to uncache all of the object's pages?
       Flush them from the TLB?
