@@ -15,7 +15,12 @@
 
 #define READSIZE (S5_NDIRECT_BLOCKS + 1) * S5_BLOCK_SIZE
 
-#define INODES_IN_USE 11
+#ifndef __VM__
+    #define INODES_IN_USE 11
+#else
+    #define INODES_IN_USE 41
+#endif
+
 #define FREE_INODES (240 - INODES_IN_USE)
 
 /* thanks Scala :) printf("{\"" + (1 to 100).mkString("\",\"") + "}\"") */
@@ -101,20 +106,21 @@ static void test_max_inodes(){
 
     char name[4];
 
-    int i;
-    for (i = 0; i < FREE_INODES; i++){
-        dbg(DBG_TEST, "i = %d\n", i);
-        int fd = do_open(filenames[i], O_RDONLY|O_CREAT);
-        KASSERT(fd == 0);
+    int i = 0;
+    
+    int fd;
+    while((fd = do_open(filenames[i], O_RDONLY|O_CREAT)) == 0){
         do_close(fd);
+        i++;
     }
 
-    KASSERT(do_open(filenames[i], O_RDONLY|O_CREAT) == -ENOSPC);
+    KASSERT(fd == -ENOSPC);
     KASSERT(do_mknod("/dev/testhahaha", S_IFCHR, 0) == -ENOSPC);
     KASSERT(do_mkdir("/dev/testhahaha") == -ENOSPC);
   
     int j;
-    for (j = 0; j < FREE_INODES; j++){
+    /*for (j = 0; j < FREE_INODES; j++){*/
+    for (j = 0; j < i; j++){
         dbg(DBG_TEST, "j = %d\n", j);
         KASSERT(do_unlink(filenames[j]) == 0);
     }
@@ -154,9 +160,6 @@ static void test_max_file_length(){
 static void test_max_data(){
     dbg(DBG_TEST, "testing maxing out on disk space\n");
 
-    int data_blocks_in_use = 58 + S5_INODE_BLOCK(239) + 1;
-    int free_data_blocks = 2048 - data_blocks_in_use;
-
     int fullfd = do_open("/fullfile", O_RDWR|O_CREAT);
     KASSERT(fullfd == 0);
 
@@ -176,19 +179,10 @@ static void test_max_data(){
 
     KASSERT(do_close(fullfd) == 0);
 
-    free_data_blocks -= (S5_MAX_FILE_BLOCKS + 1);
-
-
     int bigfd = do_open("/bigfile", O_RDWR|O_CREAT);
     KASSERT(bigfd == 0);
 
     do_lseek(bigfd, 0, SEEK_SET);
-
-    while (free_data_blocks > 0){
-        dbg(DBG_TEST, "free_data_blocks = %d\n", free_data_blocks);
-        KASSERT(do_write(bigfd, (void *) writebuf, S5_BLOCK_SIZE) == S5_BLOCK_SIZE);
-        free_data_blocks--;
-    }
 
     /* we can also hold some stuff in RAM, so we can do a few more writes */
     int last_write_res;
