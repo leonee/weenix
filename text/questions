@@ -29,5 +29,8 @@ in anon_lookuppage()
 in handle_pagefault()
     - are we supposed to flush the TLB after calling pt_map?
 
+in general:
+    - Why do we need copy_to_user() and copy_from_user()?
+
 TODO 
     locking in s5fs.c :(

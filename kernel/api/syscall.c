@@ -56,8 +56,39 @@ init_func(syscall_init);
 static int
 sys_read(read_args_t *arg)
 {
-        NOT_YET_IMPLEMENTED("VM: sys_read");
+    read_args_t kern_args;
+    int err;
+
+    if ((err = copy_from_user(&kern_args, arg, sizeof(read_args_t))) < 0) {
+        curthr->kt_errno = -err;
         return -1;
+    }
+
+    char *tmpbuf = (char *) page_alloc();
+
+    if (tmpbuf == NULL){
+        curthr->kt_errno = ENOMEM;
+        return -1;
+    }
+
+    int bytes_read = do_read(kern_args.fd, tmpbuf, kern_args.nbytes);
+
+    if (bytes_read < 0){
+        page_free(tmpbuf);
+        curthr->kt_errno = -bytes_read;
+        return -1;
+    }
+
+    err = copy_to_user(kern_args.buf, tmpbuf, bytes_read);
+
+    page_free(tmpbuf);
+
+    if (err < 0){
+        curthr->kt_errno = -err;
+        return -1;
+    }
+
+    return bytes_read;
 }
 
 /*
@@ -66,8 +97,37 @@ sys_read(read_args_t *arg)
 static int
 sys_write(write_args_t *arg)
 {
-        NOT_YET_IMPLEMENTED("VM: sys_write");
+    write_args_t kern_args;
+    int err;
+
+    if ((err = copy_from_user(&kern_args, arg, sizeof(write_args_t))) < 0){
+        curthr->kt_errno = -err;
         return -1;
+    }
+
+    char *tmpbuf = (char *) page_alloc();
+
+    if (tmpbuf == NULL){
+        curthr->kt_errno = ENOMEM;
+        return -1;
+    }
+
+    if ((err = copy_from_user(tmpbuf, kern_args.buf, kern_args.nbytes)) < 0){
+        page_free(tmpbuf);
+        curthr->kt_errno = -err;
+        return -1;
+    }
+
+    int bytes_written = do_write(kern_args.fd, tmpbuf, kern_args.nbytes);
+
+    page_free(tmpbuf);
+
+    if (bytes_written < 0){
+        curthr->kt_errno = -bytes_written;
+        return -1;
+    }
+
+    return bytes_written;
 }
 
 /*

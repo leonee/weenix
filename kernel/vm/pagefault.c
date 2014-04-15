@@ -67,7 +67,6 @@ static int has_valid_permissions(vmarea_t *vma, uint32_t cause){
 void
 handle_pagefault(uintptr_t vaddr, uint32_t cause)
 {
-    dbg(DBG_VM, "entering here\n");
     KASSERT(cause & FAULT_USER);
 
     vmarea_t *vma = vmmap_lookup(curproc->p_vmmap, ADDR_TO_PN(vaddr));
