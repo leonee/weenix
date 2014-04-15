@@ -565,41 +565,6 @@ vmmap_read(vmmap_t *map, const void *vaddr, void *buf, size_t count)
         }
     }
 
-/*    uint32_t start_vfn = ADDR_TO_PN(vaddr);*/
-    /*uint32_t end_vfn = ADDR_TO_PN((uint32_t) vaddr + (count / PAGE_SIZE)) + 1;*/
-
-    /*const void *curraddr = vaddr;*/
-
-    /*while (ADDR_TO_PN(curraddr) < end_vfn){*/
-        /*uint32_t curr_vfn = ADDR_TO_PN(curraddr);*/
-
-        /*vmarea_t *curr = vmmap_lookup(map, curr_vfn);*/
-        /*KASSERT(curr != NULL);*/
-
-        /*off_t offset = curr->vma_off + (curr_vfn - curr->vma_start);*/
-
-        /*uint32_t pages_to_read = min(curr->vma_end, end_vfn) - curr_vfn;*/
-
-        /*uint32_t i;*/
-        /*for (i = 0; i < pages_to_read; i++){*/
-            /*pframe_t *p;*/
-            /*int get_res = pframe_get(curr->vma_obj, offset + i, &p);*/
-
-            /*if (get_res < 0){*/
-                /*return get_res;*/
-            /*}*/
-
-            /*uint32_t start_addr = (uint32_t) buf + */
-                /*(PAGE_SIZE * (curr_vfn + i - start_vfn));*/
-
-            /*uint32_t bytes_left = (count - (start_addr - (uint32_t) buf));*/
-
-            /*memcpy((void *) start_addr, p->pf_addr, min(PAGE_SIZE, bytes_left));*/
-        /*}*/
-
-        /*curr_vfn += pages_to_read;*/
-    /*}*/
-
     return 0;
 }
 
@@ -614,46 +579,44 @@ vmmap_read(vmmap_t *map, const void *vaddr, void *buf, size_t count)
 int
 vmmap_write(vmmap_t *map, void *vaddr, const void *buf, size_t count)
 {
-    uint32_t start_vfn = ADDR_TO_PN(vaddr);
-    uint32_t end_vfn = ADDR_TO_PN((uint32_t) vaddr + (count / PAGE_SIZE)) + 1;
+    uint32_t srcpos = 0;
+    const void *curraddr = vaddr;   
 
-    uint32_t curr_vfn = start_vfn;
+    while (srcpos < count){
+        uint32_t currvfn = ADDR_TO_PN(curraddr);
 
-    while (curr_vfn < end_vfn){
-        vmarea_t *curr = vmmap_lookup(map, curr_vfn);
-        KASSERT(curr != NULL);
+        vmarea_t *vma = vmmap_lookup(map, currvfn);
+        KASSERT(vma != NULL);
 
-        off_t offset = curr->vma_off + (curr_vfn - curr->vma_start);
+        off_t off = vma->vma_off + (currvfn - vma->vma_start);
 
-        uint32_t pages_to_write = min(curr->vma_end, end_vfn) - curr_vfn;
-
-        /* sanity check */
-        KASSERT(pages_to_write <= curr->vma_end - curr->vma_start);
+        uint32_t pages_to_read = min(((count - srcpos)/PAGE_SIZE) + 1,
+                vma->vma_end - currvfn);
 
         uint32_t i;
-        for (i = 0; i < pages_to_write; i++){
+        for (i = 0; i < pages_to_read; i++){
             pframe_t *p;
-            int get_res = pframe_get(curr->vma_obj, offset + i, &p);
+            int get_res = pframe_get(vma->vma_obj, off + i, &p);
 
             if (get_res < 0){
                 return get_res;
             }
 
-            uint32_t start_addr = (uint32_t) buf + 
-                (PAGE_SIZE * (curr_vfn + i - start_vfn));
+            int data_offset = (int) curraddr % PAGE_SIZE;
 
-            uint32_t bytes_left = (count - (start_addr - (uint32_t) buf));
+            int write_size = min(PAGE_SIZE - data_offset, count - srcpos);
 
-            memcpy(p->pf_addr, (void *) start_addr, min(bytes_left, PAGE_SIZE)); 
+            memcpy((char *) p->pf_addr + data_offset, (char *) buf + srcpos, write_size); 
 
             int dirty_res = pframe_dirty(p);
 
             if (dirty_res < 0){
                 return dirty_res;
             }
-        }
 
-        curr_vfn += pages_to_write;
+            srcpos += write_size;
+            curraddr = (char *) curraddr + write_size;
+        }
     }
 
     return 0;
