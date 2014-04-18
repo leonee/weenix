@@ -644,11 +644,10 @@ s5fs_mkdir(vnode_t *dir, const char *name, size_t namelen)
     static const char *dotstring = ".";
     static const char *dotdotstring = "..";
 
-    vnode_t *child;
-
     KASSERT(namelen < NAME_LEN);
     KASSERT(dir->vn_ops->mkdir != NULL);
-    KASSERT(s5fs_lookup(dir, name, namelen, &child) != 0);
+
+    kmutex_lock(&dir->vn_mutex);
 
     fs_t *fs = VNODE_TO_S5FS(dir)->s5f_fs;
 
@@ -656,10 +655,13 @@ s5fs_mkdir(vnode_t *dir, const char *name, size_t namelen)
 
     if (ino < 0){
         dbg(DBG_S5FS, "unable to alloc a new inode\n");
+        kmutex_unlock(&dir->vn_mutex);
         return ino;
     }
 
-    child = vget(fs, ino);
+    vnode_t *child = vget(fs, ino);
+
+    kmutex_lock(&child->vn_mutex);
 
     /* make sure the state of the new vnode is correct */
     assert_new_vnode_state(child, ino, S5_TYPE_DIR, 0);
@@ -671,6 +673,8 @@ s5fs_mkdir(vnode_t *dir, const char *name, size_t namelen)
         /* TODO make sure we should be vputting */
         vput(child);
         s5_free_inode(child);
+        kmutex_unlock(&child->vn_mutex);
+        kmutex_unlock(&dir->vn_mutex);
         return link_res;
     }
 
@@ -682,6 +686,8 @@ s5fs_mkdir(vnode_t *dir, const char *name, size_t namelen)
         dbg(DBG_S5FS, "error creating entry for \'..\' in new directory\n");
         vput(child);
         s5_free_inode(child);
+        kmutex_unlock(&child->vn_mutex);
+        kmutex_unlock(&dir->vn_mutex);
         return link_res;
     }
 
@@ -691,6 +697,8 @@ s5fs_mkdir(vnode_t *dir, const char *name, size_t namelen)
         dbg(DBG_S5FS, "error creating entry for new directory in parent dir\n");
         vput(child);
         s5_free_inode(child);
+        kmutex_unlock(&child->vn_mutex);
+        kmutex_unlock(&dir->vn_mutex);
         return link_res;
     }
 
@@ -700,6 +708,8 @@ s5fs_mkdir(vnode_t *dir, const char *name, size_t namelen)
 
     KASSERT(child->vn_refcount - child->vn_nrespages == 0);
 
+    kmutex_unlock(&child->vn_mutex);
+    kmutex_unlock(&dir->vn_mutex);
     return 0;
 }
 
