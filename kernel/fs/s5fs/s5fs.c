@@ -445,9 +445,7 @@ s5fs_create(vnode_t *dir, const char *name, size_t namelen, vnode_t **result)
 {
     KASSERT(namelen < NAME_LEN);
 
-    vnode_t *child;
-
-    KASSERT(s5fs_lookup(dir, name, namelen, &child) != 0);
+    kmutex_lock(&dir->vn_mutex);
 
     fs_t *fs = VNODE_TO_S5FS(dir)->s5f_fs;
 
@@ -455,10 +453,13 @@ s5fs_create(vnode_t *dir, const char *name, size_t namelen, vnode_t **result)
 
     if (ino < 0){
         dbg(DBG_S5FS, "unable to alloc a new inode\n");
+        kmutex_unlock(&dir->vn_mutex);
         return ino;
     }
 
-    child = vget(fs, ino);
+    vnode_t *child = vget(fs, ino);
+
+    kmutex_lock(&child->vn_mutex);
 
     /* make sure the state of the new vnode is correct */
     assert_new_vnode_state(child, ino, S5_TYPE_DATA, 0);
@@ -468,6 +469,8 @@ s5fs_create(vnode_t *dir, const char *name, size_t namelen, vnode_t **result)
     if (link_res < 0){
         dbg(DBG_S5FS, "error creating entry for new directory in parent dir\n");
         vput(child);
+        kmutex_unlock(&child->vn_mutex);
+        kmutex_unlock(&dir->vn_mutex);
         s5_free_inode(child);
         return link_res;
     }
@@ -477,6 +480,8 @@ s5fs_create(vnode_t *dir, const char *name, size_t namelen, vnode_t **result)
 
     *result = child;
 
+    kmutex_unlock(&child->vn_mutex);
+    kmutex_unlock(&dir->vn_mutex);
     return 0;
 }
 
@@ -494,9 +499,7 @@ s5fs_mknod(vnode_t *dir, const char *name, size_t namelen, int mode, devid_t dev
 {
     KASSERT(namelen < NAME_LEN);
 
-    vnode_t *child;
-
-    KASSERT(s5fs_lookup(dir, name, namelen, &child) != 0);
+    kmutex_lock(&dir->vn_mutex);
 
     fs_t *fs = VNODE_TO_S5FS(dir)->s5f_fs;
 
@@ -512,10 +515,13 @@ s5fs_mknod(vnode_t *dir, const char *name, size_t namelen, int mode, devid_t dev
 
     if (ino < 0){
         dbg(DBG_S5FS, "unable to alloc a new inode\n");
+        kmutex_unlock(&dir->vn_mutex);
         return ino;
     }
     
-    child = vget(fs, ino);
+    vnode_t *child = vget(fs, ino);
+
+    kmutex_lock(&child->vn_mutex);
 
     /* make sure the state of the new vnode is correct */
     assert_new_vnode_state(child, ino, S_ISCHR(mode) ? S5_TYPE_CHR : S5_TYPE_BLK,
@@ -526,6 +532,8 @@ s5fs_mknod(vnode_t *dir, const char *name, size_t namelen, int mode, devid_t dev
     if (link_res < 0){
         dbg(DBG_S5FS, "error creating entry for new directory in parent dir\n");
         vput(child);
+        kmutex_unlock(&child->vn_mutex);
+        kmutex_unlock(&dir->vn_mutex);
         s5_free_inode(child);
         return link_res;
     }
@@ -535,6 +543,8 @@ s5fs_mknod(vnode_t *dir, const char *name, size_t namelen, int mode, devid_t dev
     KASSERT(child->vn_refcount == 0);
     KASSERT(VNODE_TO_S5INODE(child)->s5_linkcount == 1);
 
+    kmutex_unlock(&child->vn_mutex);
+    kmutex_unlock(&dir->vn_mutex);
     return 0;
 }
 
