@@ -65,8 +65,13 @@ shadow_init()
 mmobj_t *
 shadow_create()
 {
-        NOT_YET_IMPLEMENTED("VM: shadow_create");
-        return NULL;
+    mmobj_t *newshadow = slab_obj_alloc(shadow_allocator);
+
+    if (newshadow != NULL){
+        mmobj_init(newshadow, &shadow_mmobj_ops);
+    }
+
+    return newshadow;
 }
 
 /* Implementation of mmobj entry points: */
