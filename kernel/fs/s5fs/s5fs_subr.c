@@ -276,9 +276,7 @@ s5_write_file(vnode_t *vnode, off_t seek, const char *bytes, size_t len)
 
         KASSERT(write_size >= 0 && "write size is negative");
         memcpy((char *) p->pf_addr + data_offset, (void *) bytes, write_size);
-        pframe_pin(p);
         int dirty_res = pframe_dirty(p);
-        pframe_unpin(p);
 
         if (dirty_res < 0){
             return dirty_res;
