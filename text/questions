@@ -24,5 +24,8 @@ in handle_pagefault()
 in general:
     - Why do we need copy_to_user() and copy_from_user()?
 
-TODO 
-    locking in s5fs.c :(
+-------------------
+
+Potential bugs:
+    - if s5_write_file() ends early b/c of an error, the file 
+      size is still as if the entire write suceeded
