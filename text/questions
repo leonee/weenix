@@ -1,13 +1,6 @@
 in vfs_syscall functions
     - just want to clear up the mutex thing again
 
-in s5_seek_to_block()
-    - what to do if seekptr is great than file length
-      and we're not allocating?
-        - return 0
-    - where do we use pin() and unpin()?
-        - pin before pframe_dirty(), don't unpin until after
-
 -------------------
 
 in vmmap_map()

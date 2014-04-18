@@ -115,6 +115,10 @@ s5_seek_to_block(vnode_t *vnode, off_t seekptr, int alloc)
         return -EFBIG;
     }
 
+    if (seekptr > vnode->vn_len && !alloc){
+        return 0;
+    }
+
     s5_inode_t *inode = VNODE_TO_S5INODE(vnode);
 
     uint32_t block_num;
