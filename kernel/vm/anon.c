@@ -69,6 +69,7 @@ anon_create()
 static void
 anon_ref(mmobj_t *o)
 {
+    KASSERT(o->mmo_ops == &anon_mmobj_ops);
     o->mmo_refcount++;
 }
 

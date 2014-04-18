@@ -82,7 +82,8 @@ shadow_create()
 static void
 shadow_ref(mmobj_t *o)
 {
-        NOT_YET_IMPLEMENTED("VM: shadow_ref");
+    KASSERT(o->mmo_ops == &shadow_mmobj_ops);
+    o->mmo_refcount++;
 }
 
 /*
