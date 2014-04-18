@@ -384,14 +384,20 @@ s5fs_umount(fs_t *fs)
 static int
 s5fs_read(vnode_t *vnode, off_t offset, void *buf, size_t len)
 {
-    return s5_read_file(vnode, offset, buf, len);
+    kmutex_lock(&vnode->vn_mutex);
+    int ret = s5_read_file(vnode, offset, buf, len);
+    kmutex_unlock(&vnode->vn_mutex);
+    return ret;
 }
 
 /* Simply call s5_write_file. */
 static int
 s5fs_write(vnode_t *vnode, off_t offset, const void *buf, size_t len)
 {
-    return s5_write_file(vnode, offset, buf, len);
+    kmutex_lock(&vnode->vn_mutex);
+    int ret = s5_write_file(vnode, offset, buf, len);
+    kmutex_unlock(&vnode->vn_mutex);
+    return ret;
 }
 
 /* This function is deceptivly simple, just return the vnode's
@@ -403,7 +409,9 @@ s5fs_write(vnode_t *vnode, off_t offset, const void *buf, size_t len)
 static int
 s5fs_mmap(vnode_t *file, vmarea_t *vma, mmobj_t **ret)
 {
+    kmutex_lock(&file->vn_mutex);
     *ret = &file->vn_mmobj;
+    kmutex_unlock(&file->vn_mutex);
     return 0;
 }
 
@@ -455,11 +463,13 @@ s5fs_create(vnode_t *dir, const char *name, size_t namelen, vnode_t **result)
     /* make sure the state of the new vnode is correct */
     assert_new_vnode_state(child, ino, S5_TYPE_DATA, 0);
     
+    kmutex_lock(&child->vn_mutex);
     int link_res = s5fs_link(child, dir, name, namelen);
 
     if (link_res < 0){
         dbg(DBG_S5FS, "error creating entry for new directory in parent dir\n");
         vput(child);
+        kmutex_unlock(&child->vn_mutex);
         s5_free_inode(child);
         return link_res;
     }
@@ -468,6 +478,8 @@ s5fs_create(vnode_t *dir, const char *name, size_t namelen, vnode_t **result)
     KASSERT(VNODE_TO_S5INODE(child)->s5_linkcount == 2);
 
     *result = child;
+
+    kmutex_unlock(&child->vn_mutex);
 
     return 0;
 }
@@ -513,11 +525,13 @@ s5fs_mknod(vnode_t *dir, const char *name, size_t namelen, int mode, devid_t dev
     assert_new_vnode_state(child, ino, S_ISCHR(mode) ? S5_TYPE_CHR : S5_TYPE_BLK,
             devid);
     
+    kmutex_lock(&child->vn_mutex);
     int link_res = s5fs_link(child, dir, name, namelen);
 
     if (link_res < 0){
         dbg(DBG_S5FS, "error creating entry for new directory in parent dir\n");
         vput(child);
+        kmutex_unlock(&child->vn_mutex);
         s5_free_inode(child);
         return link_res;
     }
@@ -526,6 +540,8 @@ s5fs_mknod(vnode_t *dir, const char *name, size_t namelen, int mode, devid_t dev
 
     KASSERT(child->vn_refcount == 0);
     KASSERT(VNODE_TO_S5INODE(child)->s5_linkcount == 1);
+
+    kmutex_unlock(&child->vn_mutex);
 
     return 0;
 }
