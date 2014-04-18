@@ -292,7 +292,7 @@ vmmap_map(vmmap_t *map, vnode_t *file, uint32_t lopage, uint32_t npages,
     assert_valid_mmap_input(map, lopage, prot, flags, off, dir);
 
     if (flags & MAP_PRIVATE){
-        dbg(DBG_VM, "MAP_PRIVATE is specified. This flag will be ignored\n");
+        panic("not yet implemented");
     }
 
     vmarea_t *vma = vmarea_alloc();
