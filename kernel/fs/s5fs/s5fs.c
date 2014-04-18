@@ -798,6 +798,8 @@ static int s5fs_readdir(vnode_t *vnode, off_t offset, struct dirent *d)
         return 0;
     }    
 
+    kmutex_lock(&vnode->vn_mutex);
+
     s5_dirent_t s5d;
 
     int read_res = s5_read_file(vnode, offset, (char *) &s5d, s5_dirent_size);
@@ -813,6 +815,7 @@ static int s5fs_readdir(vnode_t *vnode, off_t offset, struct dirent *d)
         dbg(DBG_S5FS, "error reading dirent from file\n");
     }
 
+    kmutex_unlock(&vnode->vn_mutex);
     return read_res;
 }
 
@@ -829,11 +832,13 @@ static int s5fs_readdir(vnode_t *vnode, off_t offset, struct dirent *d)
 static int
 s5fs_stat(vnode_t *vnode, struct stat *ss)
 {
+    kmutex_lock(&vnode->vn_mutex);
     int allocated_blocks = s5_inode_blocks(vnode);
     s5_inode_t *inode = VNODE_TO_S5INODE(vnode);
 
     if (allocated_blocks < 0){
         dbg(DBG_S5FS, "error calculating number of allocated blocks\n");
+        kmutex_unlock(&vnode->vn_mutex);
         return allocated_blocks;
     }
 
@@ -844,6 +849,7 @@ s5fs_stat(vnode_t *vnode, struct stat *ss)
     ss->st_blksize = BLOCK_SIZE;
     ss->st_blocks = allocated_blocks;
 
+    kmutex_unlock(&vnode->vn_mutex);
     return 0;
 }
 
