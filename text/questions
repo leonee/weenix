@@ -1,6 +1,8 @@
 in vfs_syscall functions
     - just want to clear up the mutex thing again
 
+in s5fs_create() and s5fs_mknod()
+    - is it bad to call s5fs_link instead of s5_link?
 -------------------
 
 in vmmap_map()

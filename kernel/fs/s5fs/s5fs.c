@@ -445,8 +445,6 @@ s5fs_create(vnode_t *dir, const char *name, size_t namelen, vnode_t **result)
 {
     KASSERT(namelen < NAME_LEN);
 
-    kmutex_lock(&dir->vn_mutex);
-
     vnode_t *child;
 
     KASSERT(s5fs_lookup(dir, name, namelen, &child) != 0);
@@ -457,7 +455,6 @@ s5fs_create(vnode_t *dir, const char *name, size_t namelen, vnode_t **result)
 
     if (ino < 0){
         dbg(DBG_S5FS, "unable to alloc a new inode\n");
-        kmutex_unlock(&dir->vn_mutex);
         return ino;
     }
 
@@ -466,14 +463,11 @@ s5fs_create(vnode_t *dir, const char *name, size_t namelen, vnode_t **result)
     /* make sure the state of the new vnode is correct */
     assert_new_vnode_state(child, ino, S5_TYPE_DATA, 0);
     
-    kmutex_lock(&child->vn_mutex);
-    int link_res = s5fs_link(child, dir, name, namelen);
+    int link_res = s5_link(dir, child, name, namelen);
 
     if (link_res < 0){
         dbg(DBG_S5FS, "error creating entry for new directory in parent dir\n");
         vput(child);
-        kmutex_unlock(&child->vn_mutex);
-        kmutex_unlock(&dir->vn_mutex);
         s5_free_inode(child);
         return link_res;
     }
@@ -483,8 +477,6 @@ s5fs_create(vnode_t *dir, const char *name, size_t namelen, vnode_t **result)
 
     *result = child;
 
-    kmutex_unlock(&child->vn_mutex);
-    kmutex_unlock(&dir->vn_mutex);
     return 0;
 }
 
@@ -501,8 +493,6 @@ static int
 s5fs_mknod(vnode_t *dir, const char *name, size_t namelen, int mode, devid_t devid)
 {
     KASSERT(namelen < NAME_LEN);
-
-    kmutex_lock(&dir->vn_mutex);
 
     vnode_t *child;
 
@@ -522,7 +512,6 @@ s5fs_mknod(vnode_t *dir, const char *name, size_t namelen, int mode, devid_t dev
 
     if (ino < 0){
         dbg(DBG_S5FS, "unable to alloc a new inode\n");
-        kmutex_unlock(&dir->vn_mutex);
         return ino;
     }
     
@@ -532,14 +521,11 @@ s5fs_mknod(vnode_t *dir, const char *name, size_t namelen, int mode, devid_t dev
     assert_new_vnode_state(child, ino, S_ISCHR(mode) ? S5_TYPE_CHR : S5_TYPE_BLK,
             devid);
     
-    kmutex_lock(&child->vn_mutex);
-    int link_res = s5fs_link(child, dir, name, namelen);
+    int link_res = s5_link(dir, child, name, namelen);
 
     if (link_res < 0){
         dbg(DBG_S5FS, "error creating entry for new directory in parent dir\n");
         vput(child);
-        kmutex_unlock(&child->vn_mutex);
-        kmutex_unlock(&dir->vn_mutex);
         s5_free_inode(child);
         return link_res;
     }
@@ -549,8 +535,6 @@ s5fs_mknod(vnode_t *dir, const char *name, size_t namelen, int mode, devid_t dev
     KASSERT(child->vn_refcount == 0);
     KASSERT(VNODE_TO_S5INODE(child)->s5_linkcount == 1);
 
-    kmutex_unlock(&child->vn_mutex);
-    kmutex_unlock(&dir->vn_mutex);
     return 0;
 }
 
@@ -562,9 +546,11 @@ s5fs_mknod(vnode_t *dir, const char *name, size_t namelen, int mode, devid_t dev
 int
 s5fs_lookup(vnode_t *base, const char *name, size_t namelen, vnode_t **result)
 {
+    kmutex_lock(&base->vn_mutex);
     int ino = s5_find_dirent(base, name, namelen);
 
     if (ino == -ENOENT){
+        kmutex_unlock(&base->vn_mutex);
         return -ENOENT;
     }
 
@@ -576,6 +562,7 @@ s5fs_lookup(vnode_t *base, const char *name, size_t namelen, vnode_t **result)
 
     *result = child;
 
+    kmutex_unlock(&base->vn_mutex);
     return 0;
 }
 
@@ -592,7 +579,16 @@ s5fs_link(vnode_t *child, vnode_t *parent, const char *name, size_t namelen)
 {
     KASSERT(parent->vn_ops->mkdir != NULL);
     KASSERT(child->vn_ops->mkdir == NULL);
-    return s5_link(parent, child, name, namelen);
+
+    kmutex_lock(&parent->vn_mutex);
+    kmutex_lock(&child->vn_mutex);
+
+    int ret = s5_link(parent, child, name, namelen);
+
+    kmutex_unlock(&child->vn_mutex);
+    kmutex_unlock(&parent->vn_mutex);
+
+    return ret;
 }
 
 /*
@@ -607,7 +603,11 @@ static int
 s5fs_unlink(vnode_t *dir, const char *name, size_t namelen)
 {
     KASSERT(dir->vn_ops->mkdir != NULL);
-    return s5_remove_dirent(dir, name, namelen);
+
+    kmutex_lock(&dir->vn_mutex);
+    int ret = s5_remove_dirent(dir, name, namelen);
+    kmutex_unlock(&dir->vn_mutex);
+    return ret;
 }
 
 /*
