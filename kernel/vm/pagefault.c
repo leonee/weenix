@@ -85,9 +85,10 @@ handle_pagefault(uintptr_t vaddr, uint32_t cause)
         panic("not handling that yet");
     }
 
-    pframe_t *p; /* TODO use pframe_lookup */
+    pframe_t *p;
+    int forwrite = (cause & FAULT_WRITE) ? 1 : 0;
     int lookup_res = pframe_lookup(vma->vma_obj, ADDR_TO_PN(vaddr) -
-            vma->vma_start + vma->vma_off, (cause & FAULT_WRITE), &p);   
+            vma->vma_start + vma->vma_off, forwrite, &p);   
 
     if (lookup_res < 0){
         do_exit(lookup_res);

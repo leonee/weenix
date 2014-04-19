@@ -386,6 +386,7 @@ pframe_migrate(pframe_t *pf, mmobj_t *dest)
 void
 pframe_pin(pframe_t *pf)
 {
+    KASSERT(pf != NULL && "page frame is NULL");
     KASSERT(!pframe_is_free(pf) && "trying to pin a pframe marked as free\n");
 
     if (!pframe_is_pinned(pf)){
