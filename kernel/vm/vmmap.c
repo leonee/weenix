@@ -290,10 +290,7 @@ vmmap_map(vmmap_t *map, vnode_t *file, uint32_t lopage, uint32_t npages,
           int prot, int flags, off_t off, int dir, vmarea_t **new)
 {
     assert_valid_mmap_input(map, lopage, prot, flags, off, dir);
-
-    if (flags & MAP_PRIVATE){
-        panic("not yet implemented");
-    }
+    KASSERT(!(file == NULL && (flags & MAP_PRIVATE)) && "wierd combos...");
 
     vmarea_t *vma = vmarea_alloc();
 
@@ -337,6 +334,31 @@ vmmap_map(vmmap_t *map, vnode_t *file, uint32_t lopage, uint32_t npages,
             vmarea_free(vma);
             return -ENOSPC;
         }
+    }
+
+    if (flags & MAP_PRIVATE){
+        mmobj_t *shadow_obj = shadow_create();
+
+        if (shadow_obj == NULL){
+            vmarea_free(vma);
+            return -ENOSPC;
+        }
+
+        shadow_obj->mmo_shadowed = new_mmobj;
+        new_mmobj->mmo_ops->ref(new_mmobj);
+
+        mmobj_t *bottom_obj;
+
+        if (new_mmobj->mmo_shadowed != NULL){
+            bottom_obj = new_mmobj->mmo_un.mmo_bottom_obj;
+        } else {
+            bottom_obj = new_mmobj;
+        }
+
+        shadow_obj->mmo_un.mmo_bottom_obj = bottom_obj;
+        bottom_obj->mmo_ops->ref(bottom_obj);
+        
+        new_mmobj = shadow_obj;
     }
 
     int remove_res = vmmap_remove(map, starting_page, npages);
