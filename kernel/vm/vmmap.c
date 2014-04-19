@@ -336,6 +336,13 @@ vmmap_map(vmmap_t *map, vnode_t *file, uint32_t lopage, uint32_t npages,
         }
     }
 
+    int remove_res = vmmap_remove(map, starting_page, npages);
+
+    if (remove_res < 0){
+        vmarea_free(vma);
+        return remove_res;
+    }
+
     if (flags & MAP_PRIVATE){
         mmobj_t *shadow_obj = shadow_create();
 
@@ -359,13 +366,8 @@ vmmap_map(vmmap_t *map, vnode_t *file, uint32_t lopage, uint32_t npages,
         bottom_obj->mmo_ops->ref(bottom_obj);
         
         new_mmobj = shadow_obj;
-    }
 
-    int remove_res = vmmap_remove(map, starting_page, npages);
-
-    if (remove_res < 0){
-        vmarea_free(vma);
-        return remove_res;
+        list_insert_tail(&bottom_obj->mmo_un.mmo_vmas, &vma->vma_olink);
     }
 
     vma->vma_obj = new_mmobj;

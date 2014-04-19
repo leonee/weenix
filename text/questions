@@ -7,6 +7,7 @@ in vmmap_map()
     - is it okay to not set vma->vma_vmmap before calling
       mmap? we're also told to set the vma_vmmap field
       in insert.
+    - why would you have a private mapping for an anonymous object?
 
 in vmmap_read/vmmap_write()
     - should I be using pframe_lookup() instead of pframe_get()?
