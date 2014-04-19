@@ -97,7 +97,27 @@ shadow_ref(mmobj_t *o)
 static void
 shadow_put(mmobj_t *o)
 {
-        NOT_YET_IMPLEMENTED("VM: shadow_put");
+    KASSERT(o->mmo_refcount > o->mmo_nrespages && "refcount == nrespages already!");
+    KASSERT(o->mmo_nrespages >= 0);
+
+    o->mmo_refcount--;
+
+    if (o->mmo_refcount == o->mmo_nrespages){
+        pframe_t *p;
+        list_iterate_begin(&o->mmo_respages, p, pframe_t, pf_olink){
+            pframe_unpin(p);
+            tlb_flush((uintptr_t) p->pf_addr);
+            list_remove(&p->pf_link);
+        } list_iterate_end();
+
+        mmobj_t *shadowed_obj = o->mmo_shadowed;
+        mmobj_t *bottom_obj = o->mmo_un.mmo_bottom_obj;
+
+        shadowed_obj->mmo_ops->put(shadowed_obj);
+        bottom_obj->mmo_ops->put(bottom_obj);
+
+        slab_obj_free(shadow_allocator, o);
+    }
 }
 
 /* This function looks up the given page in this shadow object. The
