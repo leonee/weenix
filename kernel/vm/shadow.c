@@ -191,7 +191,11 @@ shadow_fillpage(mmobj_t *o, pframe_t *pf)
 static int
 shadow_dirtypage(mmobj_t *o, pframe_t *pf)
 {
-    return 0;
+    if (pframe_get_resident(o, pf->pf_pagenum) != NULL){
+        return 0;
+    } else {
+        return shadow_fillpage(o, pf);
+    }
 }
 
 static int

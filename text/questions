@@ -21,6 +21,8 @@ in anon_lookuppage()
 
 in handle_pagefault()
     - are we supposed to flush the TLB after calling pt_map?
+    - what does "don't forget about shadow objects, especially
+      copy-on-write magin!" mean?
 
 in general:
     - Why do we need copy_to_user() and copy_from_user()?
@@ -30,3 +32,6 @@ in general:
 Potential bugs:
     - if s5_write_file() ends early b/c of an error, the file 
       size is still as if the entire write suceeded
+
+------------------
+TODO: clean up shadow objects
