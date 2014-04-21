@@ -73,7 +73,9 @@ vmmap_create(void)
 }
 
 void vmarea_cleanup(vmarea_t *vma){
-    vma->vma_obj->mmo_ops->put(vma->vma_obj);
+    if (vma->vma_obj != NULL){
+        vma->vma_obj->mmo_ops->put(vma->vma_obj);
+    }
     list_remove(&vma->vma_plink);
 
     if (vma->vma_olink.l_next != NULL || vma->vma_olink.l_prev != NULL){
@@ -134,6 +136,37 @@ vmmap_insert(vmmap_t *map, vmarea_t *newvma)
     newvma->vma_vmmap = map;
 }
 
+static int check_ends(vmmap_t *map, uint32_t npages, int dir){
+    KASSERT(map != NULL);
+    KASSERT(dir == VMMAP_DIR_LOHI || dir == VMMAP_DIR_HILO);
+
+    list_t *vmm_list = &map->vmm_list;
+
+    if (dir == VMMAP_DIR_LOHI){
+        if (list_empty(vmm_list)){
+            return MIN_PAGENUM;
+        }
+
+        vmarea_t *first_vma = list_item(vmm_list->l_next, vmarea_t, vma_plink);
+
+        if (first_vma->vma_start - MIN_PAGENUM >= npages){
+            return MIN_PAGENUM;
+        }
+    } else {
+        if (list_empty(vmm_list)){
+            return MAX_PAGENUM - npages;
+        }
+
+        vmarea_t *last_vma = list_item(vmm_list->l_prev, vmarea_t, vma_plink);
+
+        if (MAX_PAGENUM - last_vma->vma_end >= npages){
+            return MAX_PAGENUM - npages;
+        }
+    }
+
+    return -1;
+}
+
 static int has_gap(vmarea_t *prev, vmarea_t *curr, uint32_t npages){
     return (prev != NULL && curr != NULL &&
             curr->vma_start - prev->vma_end >= npages);
@@ -149,7 +182,6 @@ static int has_gap(vmarea_t *prev, vmarea_t *curr, uint32_t npages){
 int
 vmmap_find_range(vmmap_t *map, uint32_t npages, int dir)
 {
-    panic("make sure this isn't completely backwards");
     KASSERT(map != NULL);
     KASSERT(dir == VMMAP_DIR_LOHI || dir == VMMAP_DIR_HILO);
 
@@ -158,13 +190,16 @@ vmmap_find_range(vmmap_t *map, uint32_t npages, int dir)
         return -1;
     }
 
+    /* test the beginning/end gaps that we care about */
+    int range_start;
+    if ((range_start = check_ends(map, npages, dir)) > -1){
+        return range_start;
+    }
+
+    /* that failed, so now we actually have to search the vmarea list */
     list_t *vmm_list = &map->vmm_list;
 
     if (dir == VMMAP_DIR_LOHI){
-        if (list_empty(vmm_list)){
-            return MIN_PAGENUM;
-        }
-
         list_link_t *curr = NULL;
         list_link_t *next = vmm_list->l_next;
 
@@ -174,6 +209,7 @@ vmmap_find_range(vmmap_t *map, uint32_t npages, int dir)
         while (next != vmm_list){
             curr_vma = curr ? list_item(curr, vmarea_t, vma_plink) : NULL;
             next_vma = list_item(next, vmarea_t, vma_plink);
+
             if (has_gap(curr_vma, next_vma, npages)){
                 return curr_vma->vma_end;
             }
@@ -182,21 +218,18 @@ vmmap_find_range(vmmap_t *map, uint32_t npages, int dir)
             next = next->l_next;
         }
 
+        curr_vma = list_item(curr, vmarea_t, vma_plink);
         if (MAX_PAGENUM - curr_vma->vma_end >= npages){
             return curr_vma->vma_end;
         }
     } else {
-        if (list_empty(vmm_list)){
-            return MAX_PAGENUM - npages;
-        }
-
         list_link_t *curr = NULL;
         list_link_t *prev = vmm_list->l_prev;
 
         vmarea_t *prev_vma = NULL;
         vmarea_t *curr_vma = NULL;
 
-        while (curr != vmm_list){
+        while (prev != vmm_list){
             curr_vma = curr ? list_item(curr, vmarea_t, vma_plink) : NULL;
             prev_vma = list_item(prev, vmarea_t, vma_plink);
 
@@ -208,6 +241,7 @@ vmmap_find_range(vmmap_t *map, uint32_t npages, int dir)
             prev = prev->l_prev;
         }
 
+        curr_vma = list_item(curr, vmarea_t, vma_plink);
         if (curr_vma->vma_start - MIN_PAGENUM >= npages){
             return curr_vma->vma_start - npages;
         }

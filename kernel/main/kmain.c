@@ -335,11 +335,11 @@ static void destroy_kshell_commands(){
 static void *
 initproc_run(int arg1, void *arg2)
 {
-    run_vmm_tests();
+    /*run_vmm_tests();*/
 
-    /*char *empty_args[1] = {NULL};*/
-    /*char *empty_envp[1] = {NULL};*/
-    /*kernel_execve("/usr/bin/hello", empty_args, empty_envp);*/
+    char *empty_args[1] = {NULL};
+    char *empty_envp[1] = {NULL};
+    kernel_execve("/usr/bin/hello", empty_args, empty_envp);
     
     /*run_proc_tests();*/
     /*run_tty_tests();*/
