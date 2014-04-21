@@ -8,15 +8,9 @@ in vmmap_map()
       mmap? we're also told to set the vma_vmmap field
       in insert.
 
-in anon_lookuppage()
-    - what should we return if we can't find the page?
-
 in handle_pagefault()
     - what does "don't forget about shadow objects, especially
       copy-on-write magin!" mean?
-
-in general:
-    - Why do we need copy_to_user() and copy_from_user()?
 
 -------------------
 
