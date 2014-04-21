@@ -10,11 +10,11 @@ in vmmap_map()
     - why would you have a private mapping for an anonymous object?
 
 in vmmap_read/vmmap_write()
-    - should I be using pframe_lookup() instead of pframe_get()?
+    - should I be using pframe_lookup() instead of pframe_get()? YES!!!!!!!
 
 in anon_put()
     - what does it mean to uncache all of the object's pages?
-      Flush them from the TLB?
+      Flush them from the TLB? YESSS!!!!!
 
 in anon_lookuppage()
     - what should we return if we can't find the page?

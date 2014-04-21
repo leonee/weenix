@@ -132,6 +132,10 @@ shadow_put(mmobj_t *o)
 static int
 shadow_lookuppage(mmobj_t *o, uint32_t pagenum, int forwrite, pframe_t **pf)
 {
+    if (forwrite){
+        return pframe_get(o, pagenum, pf);
+    }
+
     pframe_t *p = NULL;
     mmobj_t *curr = o;
 
@@ -141,7 +145,7 @@ shadow_lookuppage(mmobj_t *o, uint32_t pagenum, int forwrite, pframe_t **pf)
     }
 
     if (p == NULL){
-        return pframe_lookup(curr, pagenum, forwrite, pf);
+        return pframe_lookup(curr, pagenum, 0, pf);
     }
    
     *pf = p;
@@ -191,11 +195,7 @@ shadow_fillpage(mmobj_t *o, pframe_t *pf)
 static int
 shadow_dirtypage(mmobj_t *o, pframe_t *pf)
 {
-    if (pframe_get_resident(o, pf->pf_pagenum) != NULL){
-        return 0;
-    } else {
-        return shadow_fillpage(o, pf);
-    }
+    return 0;
 }
 
 static int
