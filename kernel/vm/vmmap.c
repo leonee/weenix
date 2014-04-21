@@ -615,7 +615,7 @@ vmmap_read(vmmap_t *map, const void *vaddr, void *buf, size_t count)
         uint32_t i;
         for (i = 0; i < pages_to_read; i++){
             pframe_t *p;
-            int get_res = pframe_get(vma->vma_obj, off + i, &p);
+            int get_res = pframe_lookup(vma->vma_obj, off + i, 0, &p);
 
             if (get_res < 0){
                 return get_res;
@@ -663,7 +663,7 @@ vmmap_write(vmmap_t *map, void *vaddr, const void *buf, size_t count)
         uint32_t i;
         for (i = 0; i < pages_to_read; i++){
             pframe_t *p;
-            int get_res = pframe_get(vma->vma_obj, off + i, &p);
+            int get_res = pframe_lookup(vma->vma_obj, off + i, 1, &p);
 
             if (get_res < 0){
                 return get_res;
