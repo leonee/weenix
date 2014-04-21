@@ -5,6 +5,11 @@
 #include "vm/vmmap.h"
 
 #include "mm/mman.h"
+#include "mm/mm.h"
+
+#define MIN_PAGENUM ADDR_TO_PN(USER_MEM_LOW) /* inclusive */
+#define MAX_PAGENUM ADDR_TO_PN(USER_MEM_HIGH) /* exclusive */
+#define TOTAL_RANGE MAX_PAGENUM - MIN_PAGENUM
 
 static void test_vmm_find_range_simple(){
     dbg(DBG_TEST, "beginning simple vmm_find_range tests\n");
@@ -12,46 +17,35 @@ static void test_vmm_find_range_simple(){
     vmmap_t *vmm = vmmap_create();
 
     vmarea_t zero_to_ten;
-    zero_to_ten.vma_start = 0;
-    zero_to_ten.vma_end = 10;
-
-    vmarea_t five_to_ten;
-    five_to_ten.vma_start = 5;
-    five_to_ten.vma_end = 10;
+    zero_to_ten.vma_start = 0 + MIN_PAGENUM;
+    zero_to_ten.vma_end = 10 + MIN_PAGENUM;
 
     vmarea_t twenty_to_thirty;
-    twenty_to_thirty.vma_start = 20;
-    twenty_to_thirty.vma_end = 30;
+    twenty_to_thirty.vma_start = 20 + MIN_PAGENUM;
+    twenty_to_thirty.vma_end = 30 + MIN_PAGENUM;
 
     vmarea_t thirty_to_thirtyone;
-    thirty_to_thirtyone.vma_start = 30;
-    thirty_to_thirtyone.vma_end = 31;
+    thirty_to_thirtyone.vma_start = 30 + MIN_PAGENUM;
+    thirty_to_thirtyone.vma_end = 31 + MIN_PAGENUM;
 
     list_insert_tail(&vmm->vmm_list, &zero_to_ten.vma_plink);
-    list_insert_tail(&vmm->vmm_list, &five_to_ten.vma_plink);
     list_insert_tail(&vmm->vmm_list, &twenty_to_thirty.vma_plink);
     list_insert_tail(&vmm->vmm_list, &thirty_to_thirtyone.vma_plink);
 
     /* simple positive tests */
-    KASSERT(vmmap_find_range(vmm, 3, VMMAP_DIR_LOHI) == 0);
-    KASSERT(vmmap_find_range(vmm, 3, VMMAP_DIR_HILO) == 20);
+    KASSERT(vmmap_find_range(vmm, 3, VMMAP_DIR_LOHI) == 10 + MIN_PAGENUM);
+    KASSERT(vmmap_find_range(vmm, 3, VMMAP_DIR_HILO) == MAX_PAGENUM - 3);
 
     /* simple negative tests */ 
-    KASSERT(vmmap_find_range(vmm, 20, VMMAP_DIR_LOHI) == -1);
-    KASSERT(vmmap_find_range(vmm, 20, VMMAP_DIR_HILO) == -1);
+    KASSERT(vmmap_find_range(vmm, TOTAL_RANGE - 10, VMMAP_DIR_LOHI) == -1);
+    KASSERT(vmmap_find_range(vmm, TOTAL_RANGE, VMMAP_DIR_HILO) == -1);
 
     /* finding small ranges */
-    KASSERT(vmmap_find_range(vmm, 1, VMMAP_DIR_LOHI) == 0);
-    KASSERT(vmmap_find_range(vmm, 1, VMMAP_DIR_HILO) == 30);
-    KASSERT(vmmap_find_range(vmm, 0, VMMAP_DIR_LOHI) == 0);
-    KASSERT(vmmap_find_range(vmm, 0, VMMAP_DIR_HILO) == 30);
+    KASSERT(vmmap_find_range(vmm, 1, VMMAP_DIR_LOHI) == 10 + MIN_PAGENUM);
+    KASSERT(vmmap_find_range(vmm, 1, VMMAP_DIR_HILO) == MAX_PAGENUM - 1);
+    KASSERT(vmmap_find_range(vmm, 0, VMMAP_DIR_LOHI) == 0 + MIN_PAGENUM);
+    KASSERT(vmmap_find_range(vmm, 0, VMMAP_DIR_HILO) == MAX_PAGENUM);
     
-    /* range which is the size of a vmarea */
-    KASSERT(vmmap_find_range(vmm, 10, VMMAP_DIR_LOHI) == 0);
-
-    /* range which is just above the size of the largest range of vmareas */
-    KASSERT(vmmap_find_range(vmm, 12, VMMAP_DIR_LOHI) == -1);
-
     /*vmmap_destroy(vmm);*/
 
     dbg(DBG_TEST, "simple vmm_find_range tests passed\n");
@@ -61,41 +55,62 @@ static void test_vmm_find_range_complex(){
     dbg(DBG_TEST, "beginning complex vmm_find_range tests\n");
 
     vmmap_t *vmm = vmmap_create();
+    
+    /* range which is the entire address space */
+    KASSERT(vmmap_find_range(vmm, TOTAL_RANGE, VMMAP_DIR_LOHI) == 0);
+    KASSERT(vmmap_find_range(vmm, TOTAL_RANGE, VMMAP_DIR_HILO) == 0);
 
-    vmarea_t zero_to_ten;
-    zero_to_ten.vma_start = 0;
-    zero_to_ten.vma_end = 10;
+    vmarea_t near_bottom;
+    near_bottom.vma_start = 10 + MIN_PAGENUM;
+    near_bottom.vma_end = 20 + MIN_PAGENUM;
 
-    vmarea_t ten_to_twenty;
-    ten_to_twenty.vma_start = 10;
-    ten_to_twenty.vma_end = 20;
+    vmarea_t almost_near_bottom;
+    almost_near_bottom.vma_start = 35 + MIN_PAGENUM;
+    almost_near_bottom.vma_end = 40 + MIN_PAGENUM;
 
-    vmarea_t twenty_to_thirty;
-    twenty_to_thirty.vma_start = 20;
-    twenty_to_thirty.vma_end = 30;
+    vmarea_t near_top;
+    near_top.vma_start = MAX_PAGENUM - 20;
+    near_top.vma_end = MAX_PAGENUM - 10;
 
-    vmarea_t fifty_to_fiftyfive;
-    fifty_to_fiftyfive.vma_start = 50;
-    fifty_to_fiftyfive.vma_end = 55;
+    vmarea_t almost_near_top;
+    almost_near_top.vma_start = MAX_PAGENUM - 40;
+    almost_near_top.vma_end = MAX_PAGENUM - 35;
 
-    list_insert_tail(&vmm->vmm_list, &zero_to_ten.vma_plink);
-    list_insert_tail(&vmm->vmm_list, &ten_to_twenty.vma_plink);
-    list_insert_tail(&vmm->vmm_list, &twenty_to_thirty.vma_plink);
-    list_insert_tail(&vmm->vmm_list, &fifty_to_fiftyfive.vma_plink);
+    list_insert_tail(&vmm->vmm_list, &near_bottom.vma_plink);
+    list_insert_tail(&vmm->vmm_list, &almost_near_bottom.vma_plink);
+    list_insert_tail(&vmm->vmm_list, &near_top.vma_plink);
+    list_insert_tail(&vmm->vmm_list, &almost_near_top.vma_plink);
 
-    KASSERT(vmmap_find_range(vmm, 10, VMMAP_DIR_LOHI) == 0);
-    KASSERT(vmmap_find_range(vmm, 15, VMMAP_DIR_LOHI) == 0);
-    KASSERT(vmmap_find_range(vmm, 15, VMMAP_DIR_HILO) == 10);
-    KASSERT(vmmap_find_range(vmm, 20, VMMAP_DIR_LOHI) == 0);
-    KASSERT(vmmap_find_range(vmm, 20, VMMAP_DIR_HILO) == 10);
-    KASSERT(vmmap_find_range(vmm, 29, VMMAP_DIR_LOHI) == 0);
-    KASSERT(vmmap_find_range(vmm, 29, VMMAP_DIR_HILO) == 0);
-    KASSERT(vmmap_find_range(vmm, 30, VMMAP_DIR_LOHI) == 0);
-    KASSERT(vmmap_find_range(vmm, 30, VMMAP_DIR_HILO) == 0);
-    KASSERT(vmmap_find_range(vmm, 31, VMMAP_DIR_LOHI) == -1);
-    KASSERT(vmmap_find_range(vmm, 31, VMMAP_DIR_HILO) == -1);
-    KASSERT(vmmap_find_range(vmm, 50, VMMAP_DIR_HILO) == -1);
-    KASSERT(vmmap_find_range(vmm, 100, VMMAP_DIR_HILO) == -1);
+    /* range which is the size of a gap between two VMA's*/
+    KASSERT(vmmap_find_range(vmm, 15, VMMAP_DIR_LOHI) == 10 + MIN_PAGENUM);
+    KASSERT(vmmap_find_range(vmm, 15, VMMAP_DIR_HILO) == MAX_PAGENUM - 35);
+
+    /* range which is just above the size of a gap between two VMA's */
+    KASSERT(vmmap_find_range(vmm, 16, VMMAP_DIR_LOHI) == 40 + MIN_PAGENUM);
+    KASSERT(vmmap_find_range(vmm, 16, VMMAP_DIR_HILO) == MAX_PAGENUM - 56);
+
+    /* range which is the size of a gap between a VMA and the address-space limit */
+    KASSERT(vmmap_find_range(vmm, 10, VMMAP_DIR_LOHI) == MIN_PAGENUM);
+    KASSERT(vmmap_find_range(vmm, 10, VMMAP_DIR_HILO) == MAX_PAGENUM - 10);
+
+    /* range which is just above the size of a gap between a VMA and the address-space
+     * limit */
+    KASSERT(vmmap_find_range(vmm, 11, VMMAP_DIR_LOHI) == 10 + MIN_PAGENUM);
+    KASSERT(vmmap_find_range(vmm, 11, VMMAP_DIR_HILO) == MAX_PAGENUM - 35);
+
+    uint32_t largest_gapsize = (MAX_PAGENUM - 40) - (MIN_PAGENUM + 40); 
+
+    /* range which is the size of the largest gap */
+    KASSERT(vmmap_find_range(vmm, largest_gapsize, VMMAP_DIR_LOHI) == 40);
+    KASSERT(vmmap_find_range(vmm, largest_gapsize, VMMAP_DIR_HILO) == 40);
+
+    /* range which is just above the size of the largest gap */    
+    KASSERT(vmmap_find_range(vmm, largest_gapsize + 1, VMMAP_DIR_LOHI) == -1);
+    KASSERT(vmmap_find_range(vmm, largest_gapsize + 1, VMMAP_DIR_HILO) == -1);
+        
+    /* range which is larger that the address space size */ 
+    KASSERT(vmmap_find_range(vmm, TOTAL_RANGE + 1, VMMAP_DIR_LOHI) == -1);
+    KASSERT(vmmap_find_range(vmm, TOTAL_RANGE + 1, VMMAP_DIR_HILO) == -1);
 
     /*vmmap_destroy(vmm);*/
     
@@ -108,15 +123,16 @@ static void test_vmm_find_range_one_element(){
     vmmap_t *vmm = vmmap_create();
 
     vmarea_t zero_to_ten;
-    zero_to_ten.vma_start = 0;
-    zero_to_ten.vma_end = 10;
+    zero_to_ten.vma_start = 0 + MIN_PAGENUM;
+    zero_to_ten.vma_end = 10 + MIN_PAGENUM;
 
     list_insert_tail(&vmm->vmm_list, &zero_to_ten.vma_plink);
 
-    KASSERT(vmmap_find_range(vmm, 10, VMMAP_DIR_LOHI) == 0);
-    KASSERT(vmmap_find_range(vmm, 10, VMMAP_DIR_HILO) == 0);
-    KASSERT(vmmap_find_range(vmm, 11, VMMAP_DIR_LOHI) == -1);
-    KASSERT(vmmap_find_range(vmm, 11, VMMAP_DIR_HILO) == -1);
+    KASSERT(vmmap_find_range(vmm, 10, VMMAP_DIR_LOHI) == 10 + MIN_PAGENUM);
+    KASSERT(vmmap_find_range(vmm, 10, VMMAP_DIR_HILO) == MAX_PAGENUM - 10);
+
+    KASSERT(vmmap_find_range(vmm, TOTAL_RANGE, VMMAP_DIR_LOHI) == -1);
+    KASSERT(vmmap_find_range(vmm, TOTAL_RANGE, VMMAP_DIR_HILO) == -1);
 
     /*vmmap_destroy(vmm);*/
 
