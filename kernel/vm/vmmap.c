@@ -24,6 +24,9 @@
 #include "mm/mman.h"
 #include "mm/mmobj.h"
 
+#define MIN_PAGENUM ADDR_TO_PN(USER_MEM_LOW) /* inclusive */
+#define MAX_PAGENUM ADDR_TO_PN(USER_MEM_HIGH) /* exclusive */
+
 static slab_allocator_t *vmmap_allocator;
 static slab_allocator_t *vmarea_allocator;
 
@@ -131,16 +134,9 @@ vmmap_insert(vmmap_t *map, vmarea_t *newvma)
     newvma->vma_vmmap = map;
 }
 
-/* returns one if the two vm areas are contiguous */
-static int is_contiguous(vmarea_t *vma1, vmarea_t *vma2){
-    if (vma1 == NULL || vma2 == NULL){
-        return 0;
-    }
-
-    uint32_t vma1_end = vma1->vma_off + vma1->vma_end;
-    uint32_t vma2_start = vma2->vma_off + vma2->vma_start;
-
-    return vma1_end == vma2_start;
+static int has_gap(vmarea_t *prev, vmarea_t *curr, uint32_t npages){
+    return (prev != NULL && curr != NULL &&
+            curr->vma_start - prev->vma_end >= npages);
 }
 
 /* Find a contiguous range of free virtual pages of length npages in
@@ -153,53 +149,67 @@ static int is_contiguous(vmarea_t *vma1, vmarea_t *vma2){
 int
 vmmap_find_range(vmmap_t *map, uint32_t npages, int dir)
 {
+    panic("make sure this isn't completely backwards");
     KASSERT(map != NULL);
     KASSERT(dir == VMMAP_DIR_LOHI || dir == VMMAP_DIR_HILO);
 
-    list_t *vmm_list = &map->vmm_list;
-
-    if list_empty(vmm_list){
+    if (npages > MAX_PAGENUM - MIN_PAGENUM){
+        dbg(DBG_VM, "npages (%d) is too large to fit in address space\n", npages);
         return -1;
     }
 
-    vmarea_t *prev = NULL;
-    list_link_t *currlink;
+    list_t *vmm_list = &map->vmm_list;
 
     if (dir == VMMAP_DIR_LOHI){
-        uint32_t start_vfn; 
-        currlink = vmm_list->l_next;
+        if (list_empty(vmm_list)){
+            return MIN_PAGENUM;
+        }
 
-        while (currlink != vmm_list){
-            vmarea_t *curr = list_item(currlink, vmarea_t, vma_plink);
+        list_link_t *curr = NULL;
+        list_link_t *next = vmm_list->l_next;
 
-            if (!is_contiguous(prev, curr)){
-                start_vfn = curr->vma_start;
+        vmarea_t *curr_vma = NULL;
+        vmarea_t *next_vma = NULL;
+
+        while (next != vmm_list){
+            curr_vma = curr ? list_item(curr, vmarea_t, vma_plink) : NULL;
+            next_vma = list_item(next, vmarea_t, vma_plink);
+            if (has_gap(curr_vma, next_vma, npages)){
+                return curr_vma->vma_end;
             }
 
-            if (curr->vma_end - start_vfn >= npages){
-                return start_vfn;
-            }
+            curr = next;
+            next = next->l_next;
+        }
 
-            prev = curr;
-            currlink = currlink->l_next;
+        if (MAX_PAGENUM - curr_vma->vma_end >= npages){
+            return curr_vma->vma_end;
         }
     } else {
-        uint32_t end_vfn;
-        currlink = vmm_list->l_prev;
+        if (list_empty(vmm_list)){
+            return MAX_PAGENUM - npages;
+        }
 
-        while(currlink != vmm_list){
-            vmarea_t *curr = list_item(currlink, vmarea_t, vma_plink);
+        list_link_t *curr = NULL;
+        list_link_t *prev = vmm_list->l_prev;
 
-            if (!is_contiguous(curr, prev)){
-                end_vfn = curr->vma_end;
+        vmarea_t *prev_vma = NULL;
+        vmarea_t *curr_vma = NULL;
+
+        while (curr != vmm_list){
+            curr_vma = curr ? list_item(curr, vmarea_t, vma_plink) : NULL;
+            prev_vma = list_item(prev, vmarea_t, vma_plink);
+
+            if (has_gap(prev_vma, curr_vma, npages)){
+                return curr_vma->vma_start - npages;
             }
 
-            if (end_vfn - curr->vma_start >= npages){
-                return curr->vma_start;
-            }
+            curr = prev;
+            prev = prev->l_prev;
+        }
 
-            prev = curr;
-            currlink = currlink->l_prev;
+        if (curr_vma->vma_start - MIN_PAGENUM >= npages){
+            return curr_vma->vma_start - npages;
         }
     }
 

@@ -33,5 +33,7 @@ Potential bugs:
     - if s5_write_file() ends early b/c of an error, the file 
       size is still as if the entire write suceeded
 
+    - Address space before/after list in vmmap_find_range
+
 ------------------
 TODO: clean up shadow objects
