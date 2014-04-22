@@ -266,6 +266,33 @@ vmmap_lookup(vmmap_t *map, uint32_t vfn)
     return NULL;
 }
 
+/* clones a given vma, but doesn't assign it a memory object. Returns
+ * NULL on error. It also DOES NOT insert the vmarea into any vmmap's list of
+ * vmareas.
+ */
+static vmarea_t *simple_vmarea_clone(vmarea_t *oldvma){
+    vmarea_t *newvma = vmarea_alloc();
+
+    if (newvma == NULL){
+        return NULL;
+    }
+
+    newvma->vma_start = oldvma->vma_start;
+    newvma->vma_end = oldvma->vma_end;
+    newvma->vma_off = oldvma->vma_off;
+
+    newvma->vma_prot = oldvma->vma_prot;
+    newvma->vma_flags = oldvma->vma_flags;
+
+    newvma->vma_vmmap = NULL;
+    newvma->vma_obj = NULL;
+    list_link_init(&newvma->vma_plink);
+    list_link_init(&newvma->vma_olink);
+    list_insert_before(&oldvma->vma_olink, &newvma->vma_olink);
+
+    return newvma;
+}
+
 /* Allocates a new vmmap containing a new vmarea for each area in the
  * given map. The areas should have no mmobjs set yet. Returns pointer
  * to the new vmmap on success, NULL on failure. This function is
@@ -273,8 +300,33 @@ vmmap_lookup(vmmap_t *map, uint32_t vfn)
 vmmap_t *
 vmmap_clone(vmmap_t *map)
 {
-        NOT_YET_IMPLEMENTED("VM: vmmap_clone");
+    vmmap_t *newmap = vmmap_create(); 
+
+    if (newmap == NULL){
         return NULL;
+    }
+
+    vmarea_t *curr;
+    list_iterate_begin(&map->vmm_list, curr, vmarea_t, vma_plink){
+        vmarea_t *newvma = simple_vmarea_clone(curr); 
+
+        if (newvma == NULL){
+            vmmap_destroy(newmap);
+            return NULL;
+        }
+
+        KASSERT(newvma->vma_plink.l_next == NULL && newvma->vma_plink.l_prev == NULL);
+        KASSERT(newvma->vma_obj == NULL);
+        KASSERT(newvma->vma_vmmap == NULL);
+
+        newvma->vma_vmmap = newmap;
+        list_insert_tail(&newmap->vmm_list, &newvma->vma_plink);
+        
+    } list_iterate_end();
+
+    newmap->vmm_proc = map->vmm_proc;    
+
+    return newmap;
 }
 
 static void assert_valid_mmap_input(vmmap_t *map, int lopage, int prot, int flags,
@@ -451,6 +503,11 @@ static overlap_t get_overlap_type(vmarea_t *vma, uint32_t lopage, uint32_t npage
     }
 }
 
+/* this should NOT be called from vmmap_clone, since it
+ * assigns a vm obj and increases the reference count
+ * of the object. This should ONLY be called from within
+ * vmmap_remove
+ */
 static vmarea_t *vmarea_clone(vmarea_t *old_vma){
     vmarea_t *new_vma = vmarea_alloc();
 
