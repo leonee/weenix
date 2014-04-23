@@ -17,7 +17,6 @@ in do_fork()
         - changing the regs_t doesn't actually change anything,
           does it?
     - where do we get the context from?
-
 -------------------
 
 Potential bugs:
