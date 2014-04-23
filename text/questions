@@ -13,10 +13,8 @@ in handle_pagefault()
       copy-on-write magin!" mean?
 
 in do_fork()
-    - where do we get the regs_t from?
-        - changing the regs_t doesn't actually change anything,
-          does it?
-    - where do we get the context from?
+    - does changing the regs_t actually change anything?
+
 -------------------
 
 Potential bugs:

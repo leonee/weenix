@@ -42,6 +42,50 @@ fork_setup_stack(const regs_t *regs, void *kstack)
         return esp;
 }
 
+static void assert_vma_state(vmarea_t *oldvma, vmarea_t *newvma, vmmap_t *newvmm){
+    KASSERT(oldvma->vma_start == newvma->vma_start);
+    KASSERT(oldvma->vma_end == newvma->vma_end);
+    KASSERT(oldvma->vma_off == newvma->vma_end);
+    KASSERT(oldvma->vma_prot == newvma->vma_prot);
+    KASSERT(oldvma->vma_flags == newvma->vma_flags);
+    KASSERT(oldvma->vma_vmmap == curproc->p_vmmap && newvma->vma_vmmap == newvmm);
+    KASSERT(oldvma->vma_obj != NULL && newvma->vma_obj == NULL);
+    KASSERT(list_link_is_linked(&oldvma->vma_plink));
+    KASSERT(!list_link_is_linked(&newvma->vma_plink));
+    KASSERT(list_link_is_linked(&oldvma->vma_olink));
+    KASSERT(list_link_is_linked(&newvma->vma_plink));
+
+}
+/* returns 0 on success, and -errno on error */
+static int copy_vmmap(proc_t *p){
+    vmmap_destroy(p->p_vmmap);
+
+    vmmap_t *newvmm = vmmap_clone(curproc->p_vmmap);
+    
+    if (newvmm == NULL){
+        return -ENOMEM;
+    }
+
+    list_t *old_vma_list = &curproc->p_vmmap->vmm_list;
+    list_t *new_vma_list = &newvmm->vmm_list;
+
+    list_link_t *oldcurr = old_vma_list->l_next;
+    list_link_t *newcurr = new_vma_list->l_next;
+
+    while (oldcurr != old_vma_list){
+        KASSERT(newcurr != new_vma_list && "lists are of different lengths");
+
+        vmarea_t *oldvma = list_item(oldcurr, vmarea_t, vma_plink);
+        vmarea_t *newvma = list_item(newcurr, vmarea_t, vma_plink);
+
+        assert_vma_state(oldvma, newvma, newvmm);
+
+    }
+
+
+
+    return 0;
+}
 
 /*
  * The implementation of fork(2). Once this works,
@@ -52,6 +96,15 @@ fork_setup_stack(const regs_t *regs, void *kstack)
 int
 do_fork(struct regs *regs)
 {
+    proc_t *childproc = proc_create("clonedproc");
+
+    if (childproc == NULL){
+        curthr->kt_errno = ENOMEM;
+        return -1;
+    }
+
+    copy_vmmap(childproc);
+
         NOT_YET_IMPLEMENTED("VM: do_fork");
         return 0;
 }
