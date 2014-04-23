@@ -83,6 +83,7 @@ kthread_create(struct proc *p, kthread_func_t func, long arg1, void *arg2)
     char *kstack = alloc_stack();
 
     if (kstack == NULL){
+        slab_obj_free(kthread_allocator, k);
         return NULL;
     }
     
@@ -162,7 +163,6 @@ kthread_exit(void *retval){
     curthr->kt_retval = retval;
     curthr->kt_state = KT_EXITED;
     proc_thread_exited(retval);
-
 }
 
 /*
@@ -173,10 +173,46 @@ kthread_exit(void *retval){
  * You do not need to worry about this until VM.
  */
 kthread_t *
-kthread_clone(kthread_t *thr)
+kthread_clone(kthread_t *oldthr)
 {
-        NOT_YET_IMPLEMENTED("VM: kthread_clone");
+    kthread_t *newthr = slab_obj_alloc(kthread_allocator);
+
+    if (newthr == NULL){
+        slab_obj_free(kthread_allocator, newthr);
         return NULL;
+    }
+
+    char *kstack = alloc_stack();
+
+    if (kstack == NULL){
+        return NULL;
+    }
+    
+    newthr->kt_kstack = kstack;
+
+    newthr->kt_retval = oldthr->kt_retval;
+    newthr->kt_errno = oldthr->kt_errno;
+    newthr->kt_proc = oldthr->kt_proc;
+
+    newthr->kt_cancelled = oldthr->kt_cancelled;
+
+    KASSERT(oldthr->kt_wchan == NULL);
+    newthr->kt_wchan = oldthr->kt_wchan;
+
+    KASSERT(oldthr->kt_state == KT_RUN);
+    newthr->kt_state = oldthr->kt_state;
+
+    list_link_init(&newthr->kt_qlink);
+
+    if (list_link_is_linked(&oldthr->kt_qlink)){
+        list_insert_before(&oldthr->kt_qlink, &newthr->kt_qlink);
+    }
+
+    list_link_init(&newthr->kt_plink);
+    KASSERT(list_link_is_linked(&oldthr->kt_plink));
+    list_insert_before(&oldthr->kt_plink, &newthr->kt_plink);
+
+    return newthr;
 }
 
 /*
@@ -187,6 +223,7 @@ kthread_clone(kthread_t *thr)
 #ifdef __MTP__
 int
 kthread_detach(kthread_t *kthr)
+
 {
         NOT_YET_IMPLEMENTED("MTP: kthread_detach");
         return 0;
