@@ -192,7 +192,7 @@ kthread_clone(kthread_t *oldthr)
 
     newthr->kt_retval = oldthr->kt_retval;
     newthr->kt_errno = oldthr->kt_errno;
-    newthr->kt_proc = oldthr->kt_proc;
+    newthr->kt_proc = NULL;
 
     newthr->kt_cancelled = oldthr->kt_cancelled;
 
@@ -209,8 +209,6 @@ kthread_clone(kthread_t *oldthr)
     }
 
     list_link_init(&newthr->kt_plink);
-    KASSERT(list_link_is_linked(&oldthr->kt_plink));
-    list_insert_before(&oldthr->kt_plink, &newthr->kt_plink);
 
     return newthr;
 }
