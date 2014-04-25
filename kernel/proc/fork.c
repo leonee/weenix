@@ -54,12 +54,85 @@ static void assert_vma_state(vmarea_t *oldvma, vmarea_t *newvma, vmmap_t *newvmm
     KASSERT(!list_link_is_linked(&newvma->vma_plink));
     KASSERT(list_link_is_linked(&oldvma->vma_olink));
     KASSERT(list_link_is_linked(&newvma->vma_plink));
-
 }
+
+static void setup_shadow_obj(vmarea_t *vma, mmobj_t *shadow_obj){
+    mmobj_t *bottom_obj;
+
+    if (vma->vma_obj->mmo_shadowed != NULL){
+        bottom_obj = vma->vma_obj->mmo_un.mmo_bottom_obj;
+    } else {
+        bottom_obj = vma->vma_obj;
+    }
+
+    shadow_obj->mmo_un.mmo_bottom_obj = bottom_obj;
+    bottom_obj->mmo_ops->ref(bottom_obj);
+
+    /* no need to ref() here, since vma->vma_obj has a reference from 
+     * being in the vmarea */
+    shadow_obj->mmo_shadowed = vma->vma_obj;
+
+    list_insert_tail(&bottom_obj->mmo_un.mmo_vmas, &vma->vma_olink);
+
+    /* shadow_obj already has a reference from before */
+    vma->vma_obj = shadow_obj;
+}
+
+static int setup_shadow_objects(vmarea_t *oldvma, vmarea_t *newvma){
+    mmobj_t *shadow_obj_1 = shadow_create();
+
+    if (shadow_obj_1 == NULL){
+        return -ENOSPC;
+    }
+
+    shadow_obj_1->mmo_ops->ref(shadow_obj_1);
+
+    mmobj_t *shadow_obj_2 = shadow_create();
+
+    if (shadow_obj_2 == NULL){
+        shadow_obj_1->mmo_ops->put(shadow_obj_1);
+        return -ENOSPC;
+    }
+
+    shadow_obj_2->mmo_ops->ref(shadow_obj_1);
+
+    setup_shadow_obj(oldvma, shadow_obj_1);
+    setup_shadow_obj(newvma, shadow_obj_2);
+
+    return 0;
+}
+
+/* undo the creation of shadow objects in the old vmmap_t */
+static void vmmap_revert(list_t *old_vma_list, list_t *new_vma_list){
+    list_link_t *oldcurr = old_vma_list->l_next;
+    list_link_t *newcurr = new_vma_list->l_next;
+
+    while (oldcurr != old_vma_list){
+        KASSERT(newcurr != new_vma_list && "lists are of different lengths");
+
+        vmarea_t *oldvma = list_item(oldcurr, vmarea_t, vma_plink);
+        vmarea_t *newvma = list_item(newcurr, vmarea_t, vma_plink);
+
+        /* if we found a vma w/o an mmobj, then we never got this far */
+        if (newvma->vma_obj == NULL){
+            return;
+        }
+
+        if (oldvma->vma_flags == MAP_PRIVATE){
+            KASSERT(newvma->vma_flags == MAP_PRIVATE);
+            KASSERT(newvma->vma_obj->mmo_shadowed != NULL);
+            KASSERT(oldvma->vma_obj->mmo_shadowed != NULL);
+
+            mmobj_t *oldmmo = oldvma->vma_obj->mmo_shadowed;
+            oldmmo->mmo_ops->ref(oldmmo);
+            oldvma->vma_obj->mmo_ops->put(oldvma->vma_obj);
+            oldvma->vma_obj = oldmmo;
+        }
+    }
+}
+
 /* returns 0 on success, and -errno on error */
 static int copy_vmmap(proc_t *p){
-    vmmap_destroy(p->p_vmmap);
-
     vmmap_t *newvmm = vmmap_clone(curproc->p_vmmap);
     
     if (newvmm == NULL){
@@ -72,7 +145,9 @@ static int copy_vmmap(proc_t *p){
     list_link_t *oldcurr = old_vma_list->l_next;
     list_link_t *newcurr = new_vma_list->l_next;
 
-    while (oldcurr != old_vma_list){
+    int err = 0;
+
+    while (oldcurr != old_vma_list && !err){
         KASSERT(newcurr != new_vma_list && "lists are of different lengths");
 
         vmarea_t *oldvma = list_item(oldcurr, vmarea_t, vma_plink);
@@ -80,10 +155,28 @@ static int copy_vmmap(proc_t *p){
 
         assert_vma_state(oldvma, newvma, newvmm);
 
+        newvma->vma_obj = oldvma->vma_obj;
+        oldvma->vma_obj->mmo_ops->ref(oldvma->vma_obj);
+
+        if (oldvma->vma_flags == MAP_PRIVATE){
+            int setup_res = setup_shadow_objects(oldvma, newvma);
+
+            if (setup_res < 0){
+                oldvma->vma_obj->mmo_ops->put(oldvma->vma_obj);
+                oldvma->vma_obj = NULL;
+                err = setup_res;
+            }
+        }
     }
 
+    if (err){
+        vmmap_revert(old_vma_list, new_vma_list);
+        vmmap_destroy(newvmm);
+        return err;
+    }
 
-
+    vmmap_destroy(p->p_vmmap);
+    p->p_vmmap = newvmm;
     return 0;
 }
 
@@ -103,7 +196,15 @@ do_fork(struct regs *regs)
         return -1;
     }
 
-    copy_vmmap(childproc);
+    int err = copy_vmmap(childproc);
+
+    if (err != 0){
+        panic("nyi");
+    }
+
+
+
+
 
         NOT_YET_IMPLEMENTED("VM: do_fork");
         return 0;
