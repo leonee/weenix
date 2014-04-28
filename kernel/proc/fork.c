@@ -180,6 +180,8 @@ static int copy_vmmap(proc_t *p){
         return -ENOMEM;
     }
 
+    newvmm->vmm_proc = p;
+
     list_t *old_vma_list = &curproc->p_vmmap->vmm_list;
     list_t *new_vma_list = &newvmm->vmm_list;
 

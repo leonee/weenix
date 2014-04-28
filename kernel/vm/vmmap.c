@@ -323,8 +323,6 @@ vmmap_clone(vmmap_t *map)
         
     } list_iterate_end();
 
-    newmap->vmm_proc = map->vmm_proc;    
-
     return newmap;
 }
 
