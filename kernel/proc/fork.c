@@ -290,11 +290,6 @@ static void set_pagedir(proc_t *p){
     p->p_pagedir = curproc->p_pagedir;
 }
 
-/* destroy the child proc */
-static void proc_teardown(proc_t *p){
-    // TODO
-}
-
 /*
  * The implementation of fork(2). Once this works,
  * you're practically home free. This is what the
@@ -314,7 +309,7 @@ do_fork(struct regs *regs)
     int err = copy_vmmap(childproc);
 
     if (err){
-        proc_teardown(childproc);
+        panic("nyi");
         return err;
     }
 
@@ -336,6 +331,5 @@ do_fork(struct regs *regs)
      * new thread with a value of 0 */
     regs->r_eax = childproc->p_pid;
 
-    NOT_YET_IMPLEMENTED("VM: do_fork");
     return 0;
 }

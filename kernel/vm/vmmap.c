@@ -288,7 +288,6 @@ static vmarea_t *simple_vmarea_clone(vmarea_t *oldvma){
     newvma->vma_obj = NULL;
     list_link_init(&newvma->vma_plink);
     list_link_init(&newvma->vma_olink);
-    list_insert_before(&oldvma->vma_olink, &newvma->vma_olink);
 
     return newvma;
 }
