@@ -42,6 +42,7 @@ fork_setup_stack(const regs_t *regs, void *kstack)
         return esp;
 }
 
+/* used to verify the state of two vmas after a call to vmmap_clone() */
 static void assert_vma_state(vmarea_t *oldvma, vmarea_t *newvma, vmmap_t *newvmm){
     KASSERT(oldvma->vma_start == newvma->vma_start);
     KASSERT(oldvma->vma_end == newvma->vma_end);
@@ -51,8 +52,35 @@ static void assert_vma_state(vmarea_t *oldvma, vmarea_t *newvma, vmmap_t *newvmm
     KASSERT(oldvma->vma_vmmap == curproc->p_vmmap && newvma->vma_vmmap == newvmm);
     KASSERT(oldvma->vma_obj != NULL && newvma->vma_obj == NULL);
     KASSERT(list_link_is_linked(&oldvma->vma_plink));
-    KASSERT(!list_link_is_linked(&newvma->vma_plink));
+    KASSERT(list_link_is_linked(&newvma->vma_plink));
+    /* TODO is this next assertion correct? */
     KASSERT(list_link_is_linked(&oldvma->vma_olink));
+    KASSERT(!list_link_is_linked(&newvma->vma_olink));
+}
+
+/* used to verify the state of two vma's which have private mappings on top
+ * of the same memory object*/
+static void assert_vmas_equivalent(vmarea_t *oldvma, vmarea_t *newvma){
+    KASSERT(oldvma->vma_start == newvma->vma_start);
+    KASSERT(oldvma->vma_end == newvma->vma_end);
+    KASSERT(oldvma->vma_off == newvma->vma_end);
+    KASSERT(oldvma->vma_prot == newvma->vma_prot);
+    KASSERT(oldvma->vma_flags == newvma->vma_flags);
+    KASSERT(oldvma->vma_vmmap == curproc->p_vmmap && newvma->vma_vmmap != NULL &&
+            newvma->vma_vmmap != curproc->p_vmmap);
+
+    if (oldvma->vma_flags == MAP_PRIVATE){
+        KASSERT(oldvma->vma_obj->mmo_shadowed != NULL
+                && oldvma->vma_obj->mmo_shadowed == newvma->vma_obj->mmo_shadowed);
+        KASSERT(oldvma->vma_obj->mmo_nrespages == 0
+                && newvma->vma_obj->mmo_nrespages == 0);
+        KASSERT(oldvma->vma_obj->mmo_un.mmo_bottom_obj
+                == newvma->vma_obj->mmo_un.mmo_bottom_obj);
+        KASSERT(list_link_is_linked(&oldvma->vma_olink));
+        KASSERT(list_link_is_linked(&newvma->vma_olink));
+    }
+
+    KASSERT(list_link_is_linked(&oldvma->vma_plink));
     KASSERT(list_link_is_linked(&newvma->vma_plink));
 }
 
@@ -65,12 +93,19 @@ static void setup_shadow_obj(vmarea_t *vma, mmobj_t *shadow_obj){
         bottom_obj = vma->vma_obj;
     }
 
+    /* bottom object cannot be a shadow object */
+    KASSERT(bottom_obj->mmo_shadowed == NULL);
+
     shadow_obj->mmo_un.mmo_bottom_obj = bottom_obj;
     bottom_obj->mmo_ops->ref(bottom_obj);
 
     /* no need to ref() here, since vma->vma_obj has a reference from 
      * being in the vmarea */
     shadow_obj->mmo_shadowed = vma->vma_obj;
+
+    if (list_link_is_linked(&vma->vma_olink)){
+        list_remove(&vma->vma_olink);
+    }
 
     list_insert_tail(&bottom_obj->mmo_un.mmo_vmas, &vma->vma_olink);
 
@@ -86,6 +121,7 @@ static int setup_shadow_objects(vmarea_t *oldvma, vmarea_t *newvma){
     }
 
     shadow_obj_1->mmo_ops->ref(shadow_obj_1);
+    KASSERT(shadow_obj_1->mmo_refcount == 1);
 
     mmobj_t *shadow_obj_2 = shadow_create();
 
@@ -95,6 +131,7 @@ static int setup_shadow_objects(vmarea_t *oldvma, vmarea_t *newvma){
     }
 
     shadow_obj_2->mmo_ops->ref(shadow_obj_1);
+    KASSERT(shadow_obj_2->mmo_refcount == 1);
 
     setup_shadow_obj(oldvma, shadow_obj_1);
     setup_shadow_obj(newvma, shadow_obj_2);
@@ -118,6 +155,8 @@ static void vmmap_revert(list_t *old_vma_list, list_t *new_vma_list){
             return;
         }
 
+        assert_vmas_equivalent(oldvma, newvma);
+
         if (oldvma->vma_flags == MAP_PRIVATE){
             KASSERT(newvma->vma_flags == MAP_PRIVATE);
             KASSERT(newvma->vma_obj->mmo_shadowed != NULL);
@@ -129,6 +168,8 @@ static void vmmap_revert(list_t *old_vma_list, list_t *new_vma_list){
             oldvma->vma_obj = oldmmo;
         }
     }
+
+    KASSERT(newcurr == new_vma_list && "lists are of different lengths");
 }
 
 /* returns 0 on success, and -errno on error */
@@ -159,15 +200,20 @@ static int copy_vmmap(proc_t *p){
         oldvma->vma_obj->mmo_ops->ref(oldvma->vma_obj);
 
         if (oldvma->vma_flags == MAP_PRIVATE){
-            int setup_res = setup_shadow_objects(oldvma, newvma);
+            err = setup_shadow_objects(oldvma, newvma);
+            KASSERT(err <= 0);
 
-            if (setup_res < 0){
+            if (err < 0){
                 oldvma->vma_obj->mmo_ops->put(oldvma->vma_obj);
                 oldvma->vma_obj = NULL;
-                err = setup_res;
             }
         }
+
+        oldcurr = oldcurr->l_next;
+        newcurr = newcurr->l_next;
     }
+
+    KASSERT(newcurr == new_vma_list && "lists are of different lengths");
 
     if (err){
         vmmap_revert(old_vma_list, new_vma_list);
