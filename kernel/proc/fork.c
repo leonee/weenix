@@ -69,7 +69,7 @@ static void assert_vmas_equivalent(vmarea_t *oldvma, vmarea_t *newvma){
     KASSERT(oldvma->vma_vmmap == curproc->p_vmmap && newvma->vma_vmmap != NULL &&
             newvma->vma_vmmap != curproc->p_vmmap);
 
-    if oldvma->vma_flags == MAP_PRIVATE){
+    if (oldvma->vma_flags == MAP_PRIVATE){
         KASSERT(oldvma->vma_obj->mmo_shadowed != NULL
                 && oldvma->vma_obj->mmo_shadowed == newvma->vma_obj->mmo_shadowed);
         KASSERT(oldvma->vma_obj->mmo_nrespages == 0
@@ -241,17 +241,22 @@ static void assert_new_thread_state(kthread_t *k){
     KASSERT(!list_link_is_linked(&k->kt_plink));
 }
 
-static int setup_thread(proc_t *p, struct regs *regs){
+static kthread_t *setup_thread(proc_t *p, struct regs *regs){
     kthread_t *newthr = kthread_clone(curthr);
     assert_new_thread_state(newthr);
 
     if (newthr == NULL){
-        return -ENOMEM;
+        return NULL;
     }
 
     KASSERT(newthr->kt_proc == NULL && "new thread already has a process");
     newthr->kt_proc = p;
     list_insert_tail(&p->p_threads, &newthr->kt_plink);
+
+    /* set the return value in the regs struct to 0 
+     * before we copy the regs struct into the new
+     * thread's stack*/
+    regs->r_eax = 0;
 
     int stack_setup_res = fork_setup_stack(regs, newthr->kt_kstack);
 
@@ -261,7 +266,33 @@ static int setup_thread(proc_t *p, struct regs *regs){
     newthr->kt_ctx.c_kstack = (uintptr_t) newthr->kt_kstack;
     newthr->kt_ctx.c_kstacksz = DEFAULT_STACK_SIZE;
 
-    return 0;
+    return newthr;
+}
+
+/* copy filetable of curproc into p */
+static void copy_filetable(proc_t *p){
+    int i;
+    for (i = 0; i < NFILES; i++){
+        p->p_files[i] = curproc->p_files[i];
+        if (p->p_files[i] != NULL){
+            fref(p->p_files[i]);
+        }
+    }
+}
+
+static void unmap_pagetable(){
+    tlb_flush_all();
+    pt_unmap_range(curproc->p_pagedir, USER_MEM_LOW, USER_MEM_HIGH);
+}
+
+static void set_pagedir(proc_t *p){
+    pt_destroy_pagedir(p->p_pagedir);
+    p->p_pagedir = curproc->p_pagedir;
+}
+
+/* destroy the child proc */
+static void proc_teardown(proc_t *p){
+    // TODO
 }
 
 /*
@@ -283,17 +314,28 @@ do_fork(struct regs *regs)
     int err = copy_vmmap(childproc);
 
     if (err){
-        panic("nyi");
+        proc_teardown(childproc);
+        return err;
     }
 
-    err = setup_thread(childproc, regs);
+    kthread_t *newthr = setup_thread(childproc, regs);
 
-    if (err){
+    if (newthr == NULL){
         panic("nyi");
+        return -ENOMEM;
     }
 
+    copy_filetable(childproc);
+    set_pagedir(childproc);
 
+    unmap_pagetable();
 
-        NOT_YET_IMPLEMENTED("VM: do_fork");
-        return 0;
+    sched_make_runnable(newthr);
+
+    /* set eax to the child's pid, now that we've copied it over into the
+     * new thread with a value of 0 */
+    regs->r_eax = childproc->p_pid;
+
+    NOT_YET_IMPLEMENTED("VM: do_fork");
+    return 0;
 }
