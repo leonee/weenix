@@ -14,6 +14,7 @@ in handle_pagefault()
 
 in do_fork()
     - does changing the regs_t actually change anything?
+    - how does the reg struct get passed to userland_entry?
 
 -------------------
 

@@ -178,13 +178,13 @@ kthread_clone(kthread_t *oldthr)
     kthread_t *newthr = slab_obj_alloc(kthread_allocator);
 
     if (newthr == NULL){
-        slab_obj_free(kthread_allocator, newthr);
         return NULL;
     }
 
     char *kstack = alloc_stack();
 
     if (kstack == NULL){
+        slab_obj_free(kthread_allocator, newthr);
         return NULL;
     }
     

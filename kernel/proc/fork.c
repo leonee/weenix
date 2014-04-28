@@ -69,7 +69,7 @@ static void assert_vmas_equivalent(vmarea_t *oldvma, vmarea_t *newvma){
     KASSERT(oldvma->vma_vmmap == curproc->p_vmmap && newvma->vma_vmmap != NULL &&
             newvma->vma_vmmap != curproc->p_vmmap);
 
-    if (oldvma->vma_flags == MAP_PRIVATE){
+    if oldvma->vma_flags == MAP_PRIVATE){
         KASSERT(oldvma->vma_obj->mmo_shadowed != NULL
                 && oldvma->vma_obj->mmo_shadowed == newvma->vma_obj->mmo_shadowed);
         KASSERT(oldvma->vma_obj->mmo_nrespages == 0
@@ -226,6 +226,44 @@ static int copy_vmmap(proc_t *p){
     return 0;
 }
 
+/* used to assert the state of a newly cloned thread */
+static void assert_new_thread_state(kthread_t *k){
+    KASSERT(&k->kt_ctx != &curthr->kt_ctx);
+    KASSERT(k->kt_kstack != curthr->kt_kstack);
+    KASSERT(k->kt_retval == curthr->kt_retval);
+    KASSERT(k->kt_errno == curthr->kt_errno);
+    KASSERT(k->kt_proc == NULL);
+    KASSERT(k->kt_cancelled == curthr->kt_cancelled);
+    KASSERT(k->kt_wchan == curthr->kt_wchan);
+    KASSERT(k->kt_state == curthr->kt_state);
+    KASSERT(list_link_is_linked(&k->kt_qlink)
+            == list_link_is_linked(&curthr->kt_qlink));
+    KASSERT(!list_link_is_linked(&k->kt_plink));
+}
+
+static int setup_thread(proc_t *p, struct regs *regs){
+    kthread_t *newthr = kthread_clone(curthr);
+    assert_new_thread_state(newthr);
+
+    if (newthr == NULL){
+        return -ENOMEM;
+    }
+
+    KASSERT(newthr->kt_proc == NULL && "new thread already has a process");
+    newthr->kt_proc = p;
+    list_insert_tail(&p->p_threads, &newthr->kt_plink);
+
+    int stack_setup_res = fork_setup_stack(regs, newthr->kt_kstack);
+
+    newthr->kt_ctx.c_pdptr = curproc->p_pagedir;
+    newthr->kt_ctx.c_eip = (uint32_t) userland_entry;
+    newthr->kt_ctx.c_esp = stack_setup_res;
+    newthr->kt_ctx.c_kstack = (uintptr_t) newthr->kt_kstack;
+    newthr->kt_ctx.c_kstacksz = DEFAULT_STACK_SIZE;
+
+    return 0;
+}
+
 /*
  * The implementation of fork(2). Once this works,
  * you're practically home free. This is what the
@@ -244,11 +282,15 @@ do_fork(struct regs *regs)
 
     int err = copy_vmmap(childproc);
 
-    if (err != 0){
+    if (err){
         panic("nyi");
     }
 
+    err = setup_thread(childproc, regs);
 
+    if (err){
+        panic("nyi");
+    }
 
 
 
