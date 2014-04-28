@@ -69,7 +69,8 @@ static void assert_vmas_equivalent(vmarea_t *oldvma, vmarea_t *newvma){
     KASSERT(oldvma->vma_vmmap == curproc->p_vmmap && newvma->vma_vmmap != NULL &&
             newvma->vma_vmmap != curproc->p_vmmap);
 
-    if (oldvma->vma_flags == MAP_PRIVATE){
+    int map_type = oldvma->vma_flags & MAP_TYPE;
+    if (map_type == MAP_PRIVATE){
         KASSERT(oldvma->vma_obj->mmo_shadowed != NULL
                 && oldvma->vma_obj->mmo_shadowed == newvma->vma_obj->mmo_shadowed);
         KASSERT(oldvma->vma_obj->mmo_nrespages == 0
@@ -85,13 +86,7 @@ static void assert_vmas_equivalent(vmarea_t *oldvma, vmarea_t *newvma){
 }
 
 static void setup_shadow_obj(vmarea_t *vma, mmobj_t *shadow_obj){
-    mmobj_t *bottom_obj;
-
-    if (vma->vma_obj->mmo_shadowed != NULL){
-        bottom_obj = vma->vma_obj->mmo_un.mmo_bottom_obj;
-    } else {
-        bottom_obj = vma->vma_obj;
-    }
+    mmobj_t *bottom_obj = mmobj_bottom_obj(vma->vma_obj);
 
     /* bottom object cannot be a shadow object */
     KASSERT(bottom_obj->mmo_shadowed == NULL);
@@ -157,16 +152,22 @@ static void vmmap_revert(list_t *old_vma_list, list_t *new_vma_list){
 
         assert_vmas_equivalent(oldvma, newvma);
 
-        if (oldvma->vma_flags == MAP_PRIVATE){
-            KASSERT(newvma->vma_flags == MAP_PRIVATE);
+        if ((oldvma->vma_flags & MAP_TYPE) == MAP_PRIVATE){
+            KASSERT((newvma->vma_flags & MAP_TYPE) == MAP_PRIVATE);
             KASSERT(newvma->vma_obj->mmo_shadowed != NULL);
             KASSERT(oldvma->vma_obj->mmo_shadowed != NULL);
 
             mmobj_t *oldmmo = oldvma->vma_obj->mmo_shadowed;
             oldmmo->mmo_ops->ref(oldmmo);
+
+            /* make sure that putting it will take care of it */
+            KASSERT(oldvma->vma_obj->mmo_refcount == 1);
             oldvma->vma_obj->mmo_ops->put(oldvma->vma_obj);
             oldvma->vma_obj = oldmmo;
         }
+
+        oldcurr = oldcurr->l_next;
+        newcurr = newcurr->l_next;
     }
 
     KASSERT(newcurr == new_vma_list && "lists are of different lengths");
@@ -199,15 +200,18 @@ static int copy_vmmap(proc_t *p){
         assert_vma_state(oldvma, newvma, newvmm);
 
         newvma->vma_obj = oldvma->vma_obj;
-        oldvma->vma_obj->mmo_ops->ref(oldvma->vma_obj);
+        newvma->vma_obj->mmo_ops->ref(newvma->vma_obj);
 
-        if (oldvma->vma_flags == MAP_PRIVATE){
+        int map_type = oldvma->vma_flags & MAP_TYPE;
+        KASSERT(map_type == MAP_PRIVATE || map_type == MAP_SHARED);
+
+        if (map_type == MAP_PRIVATE){
             err = setup_shadow_objects(oldvma, newvma);
             KASSERT(err <= 0);
 
             if (err < 0){
-                oldvma->vma_obj->mmo_ops->put(oldvma->vma_obj);
-                oldvma->vma_obj = NULL;
+                newvma->vma_obj->mmo_ops->put(newvma->vma_obj);
+                newvma->vma_obj = NULL;
             }
         }
 
@@ -215,7 +219,9 @@ static int copy_vmmap(proc_t *p){
         newcurr = newcurr->l_next;
     }
 
-    KASSERT(newcurr == new_vma_list && "lists are of different lengths");
+    if (oldcurr == old_vma_list){
+        KASSERT(newcurr == new_vma_list && "lists are of different lengths");
+    }
 
     if (err){
         vmmap_revert(old_vma_list, new_vma_list);
