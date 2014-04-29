@@ -120,6 +120,8 @@ vmmap_insert(vmmap_t *map, vmarea_t *newvma)
     KASSERT(newvma->vma_vmmap == NULL);
     KASSERT(!(list_link_is_linked(&newvma->vma_plink)));
 
+    newvma->vma_vmmap = map;
+
     list_t *list = &map->vmm_list;
     list_link_t *link = list->l_next;
     for (link = list->l_next; link != list; link = link->l_next){
@@ -132,8 +134,6 @@ vmmap_insert(vmmap_t *map, vmarea_t *newvma)
 
     /* if we get here, it goes at the end */
     list_insert_tail(list, &newvma->vma_plink);
-
-    newvma->vma_vmmap = map;
 }
 
 static int check_ends(vmmap_t *map, uint32_t npages, int dir){

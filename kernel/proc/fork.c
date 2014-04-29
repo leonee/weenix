@@ -63,7 +63,7 @@ static void assert_vma_state(vmarea_t *oldvma, vmarea_t *newvma, vmmap_t *newvmm
 static void assert_vmas_equivalent(vmarea_t *oldvma, vmarea_t *newvma){
     KASSERT(oldvma->vma_start == newvma->vma_start);
     KASSERT(oldvma->vma_end == newvma->vma_end);
-    KASSERT(oldvma->vma_off == newvma->vma_end);
+    KASSERT(oldvma->vma_off == newvma->vma_off);
     KASSERT(oldvma->vma_prot == newvma->vma_prot);
     KASSERT(oldvma->vma_flags == newvma->vma_flags);
     KASSERT(oldvma->vma_vmmap == curproc->p_vmmap && newvma->vma_vmmap != NULL &&
