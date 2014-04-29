@@ -125,7 +125,7 @@ static int setup_shadow_objects(vmarea_t *oldvma, vmarea_t *newvma){
         return -ENOSPC;
     }
 
-    shadow_obj_2->mmo_ops->ref(shadow_obj_1);
+    shadow_obj_2->mmo_ops->ref(shadow_obj_2);
     KASSERT(shadow_obj_2->mmo_refcount == 1);
 
     setup_shadow_obj(oldvma, shadow_obj_1);
