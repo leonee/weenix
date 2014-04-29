@@ -270,7 +270,7 @@ static kthread_t *setup_thread(proc_t *p, struct regs *regs){
 
     int stack_setup_res = fork_setup_stack(regs, newthr->kt_kstack);
 
-    newthr->kt_ctx.c_pdptr = curproc->p_pagedir;
+    newthr->kt_ctx.c_pdptr = p->p_pagedir;
     newthr->kt_ctx.c_eip = (uint32_t) userland_entry;
     newthr->kt_ctx.c_esp = stack_setup_res;
     newthr->kt_ctx.c_kstack = (uintptr_t) newthr->kt_kstack;
@@ -295,11 +295,6 @@ static void copy_filetable(proc_t *p){
 static void unmap_pagetable(){
     tlb_flush_all();
     pt_unmap_range(curproc->p_pagedir, USER_MEM_LOW, USER_MEM_HIGH);
-}
-
-static void set_pagedir(proc_t *p){
-    pt_destroy_pagedir(p->p_pagedir);
-    p->p_pagedir = curproc->p_pagedir;
 }
 
 /*
@@ -333,7 +328,6 @@ do_fork(struct regs *regs)
     }
 
     copy_filetable(childproc);
-    set_pagedir(childproc);
 
     unmap_pagetable();
 
