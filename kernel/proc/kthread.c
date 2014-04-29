@@ -202,11 +202,8 @@ kthread_clone(kthread_t *oldthr)
     KASSERT(oldthr->kt_state == KT_RUN);
     newthr->kt_state = oldthr->kt_state;
 
+    KASSERT(!list_link_is_linked(&oldthr->kt_qlink));
     list_link_init(&newthr->kt_qlink);
-
-    if (list_link_is_linked(&oldthr->kt_qlink)){
-        list_insert_before(&oldthr->kt_qlink, &newthr->kt_qlink);
-    }
 
     list_link_init(&newthr->kt_plink);
 

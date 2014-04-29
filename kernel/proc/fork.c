@@ -251,13 +251,15 @@ static void assert_new_thread_state(kthread_t *k){
 
 static kthread_t *setup_thread(proc_t *p, struct regs *regs){
     kthread_t *newthr = kthread_clone(curthr);
-    assert_new_thread_state(newthr);
 
     if (newthr == NULL){
         return NULL;
     }
 
+    assert_new_thread_state(newthr);
+
     KASSERT(newthr->kt_proc == NULL && "new thread already has a process");
+    KASSERT(!list_link_is_linked(&newthr->kt_plink));
     newthr->kt_proc = p;
     list_insert_tail(&p->p_threads, &newthr->kt_plink);
 
@@ -281,6 +283,8 @@ static kthread_t *setup_thread(proc_t *p, struct regs *regs){
 static void copy_filetable(proc_t *p){
     int i;
     for (i = 0; i < NFILES; i++){
+        KASSERT(p->p_files[i] == NULL);
+
         p->p_files[i] = curproc->p_files[i];
         if (p->p_files[i] != NULL){
             fref(p->p_files[i]);
