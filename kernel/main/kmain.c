@@ -55,6 +55,7 @@
 #include "../test/kshell/priv.h"
 #include "../test/kshell/command.h"
 
+#include "test/kshell/io.h"
 GDB_DEFINE_HOOK(boot)
 GDB_DEFINE_HOOK(initialized)
 GDB_DEFINE_HOOK(shutdown)
@@ -321,6 +322,16 @@ static void destroy_kshell_commands(){
     }
 }
 
+int kshell_exec(kshell_t *k, int argc, char **argv){
+    if (argc != 2){
+        kprintf(k, "Usage: <command>\n");
+        return -1;
+    }
+
+    panic("nyi");
+    return 0;
+}
+
 /**
  * The init thread's function changes depending on how far along your Weenix is
  * developed. Before VM/FI, you'll probably just want to have this run whatever
@@ -337,9 +348,11 @@ initproc_run(int arg1, void *arg2)
 {
     /*run_vmm_tests();*/
 
+    kshell_add_command("exec", kshell_exec, "executes a given command");
+
     char *empty_args[1] = {NULL};
     char *empty_envp[1] = {NULL};
-    kernel_execve("/usr/bin/forktest", empty_args, empty_envp);
+    kernel_execve("/usr/bin/forkbomb", empty_args, empty_envp);
     
     /*run_proc_tests();*/
     /*run_tty_tests();*/
