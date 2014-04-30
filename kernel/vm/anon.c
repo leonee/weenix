@@ -95,7 +95,7 @@ anon_put(mmobj_t *o)
             pframe_unpin(p);
             tlb_flush((uintptr_t) p->pf_addr);
             list_remove(&p->pf_link);
-            
+            list_remove(&p->pf_hlink);
         } list_iterate_end();
 
         slab_obj_free(anon_allocator, (void *) o);

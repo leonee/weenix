@@ -108,6 +108,7 @@ shadow_put(mmobj_t *o)
             pframe_unpin(p);
             tlb_flush((uintptr_t) p->pf_addr);
             list_remove(&p->pf_link);
+            list_remove(&p->pf_hlink);
         } list_iterate_end();
 
         mmobj_t *shadowed_obj = o->mmo_shadowed;

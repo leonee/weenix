@@ -17,6 +17,8 @@
 #include "vm/pagefault.h"
 #include "vm/vmmap.h"
 
+#include "mm/tlb.h"
+
 static int has_valid_permissions(vmarea_t *vma, uint32_t cause){
     if (vma->vma_prot & PROT_NONE){
         return 0;
@@ -119,5 +121,6 @@ handle_pagefault(uintptr_t vaddr, uint32_t cause)
            (uintptr_t) PAGE_ALIGN_DOWN(vaddr),
            pt_virt_to_phys((uintptr_t) p->pf_addr), pdflags, ptflags);
 
+    tlb_flush_all();
     /* TODO flush TLB (?) */
 }

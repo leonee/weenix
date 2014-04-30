@@ -18,6 +18,9 @@ in do_fork()
     - isn't the cwd set automatically?
     - how do we give two return values?
 
+in *_put()
+    - is what I'm doing w.r.t. unlinking stuff safe?
+
 -------------------
 
 Potential bugs:
