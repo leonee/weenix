@@ -4,6 +4,8 @@ commands.gdb
 cscope.out
 kernel/weenix
 
+userland-gdb
+
 # normal build system output
 disk0.img
 disk0.vmdk
