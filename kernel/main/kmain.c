@@ -50,6 +50,7 @@
 #include "test/memdevtest.h"
 #include "test/s5fstest.h"
 #include "test/vmmtest.h"
+#include "test/kshell/customcommands.h"
 
 #include "test/kshell/kshell.h"
 #include "../test/kshell/priv.h"
@@ -322,16 +323,6 @@ static void destroy_kshell_commands(){
     }
 }
 
-int kshell_exec(kshell_t *k, int argc, char **argv){
-    if (argc != 2){
-        kprintf(k, "Usage: <command>\n");
-        return -1;
-    }
-
-    panic("nyi");
-    return 0;
-}
-
 /**
  * The init thread's function changes depending on how far along your Weenix is
  * developed. Before VM/FI, you'll probably just want to have this run whatever
@@ -352,7 +343,7 @@ initproc_run(int arg1, void *arg2)
 
     char *empty_args[1] = {NULL};
     char *empty_envp[1] = {NULL};
-    kernel_execve("/usr/bin/forkbomb", empty_args, empty_envp);
+    kernel_execve("/usr/bin/kshell", empty_args, empty_envp);
     
     /*run_proc_tests();*/
     /*run_tty_tests();*/
