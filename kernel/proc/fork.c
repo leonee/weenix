@@ -337,5 +337,5 @@ do_fork(struct regs *regs)
      * new thread with a value of 0 */
     regs->r_eax = childproc->p_pid;
 
-    return 0;
+    return childproc->p_pid;
 }
