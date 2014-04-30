@@ -21,6 +21,11 @@ in do_fork()
 in *_put()
     - is what I'm doing w.r.t. unlinking stuff safe?
 
+in do_mmap()
+    - what is the error case for the address, length
+      or offset being bad?
+    - can we just ignore ENFILE, SIGSEGV, and SIGBUF?
+
 In general:
     - wtf is this shadow daemon thing?
 

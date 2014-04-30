@@ -19,6 +19,15 @@
 #include "vm/vmmap.h"
 #include "vm/mmap.h"
 
+static int valid_map_type(int flags){
+    int map_type = flags & MAP_TYPE;
+    return (map_type == MAP_SHARED || map_type == MAP_PRIVATE);
+}
+
+static int valid_fd(int fd){
+    return (fd >= 0 && fd < NFILES);
+}
+
 /*
  * This function implements the mmap(2) syscall, but only
  * supports the MAP_SHARED, MAP_PRIVATE, MAP_FIXED, and
@@ -34,8 +43,64 @@ int
 do_mmap(void *addr, size_t len, int prot, int flags,
         int fd, off_t off, void **ret)
 {
-        NOT_YET_IMPLEMENTED("VM: do_mmap");
-        return -1;
+    if (len == 0){
+        return -EINVAL;
+    }
+
+    if (!valid_map_type(flags)){
+        return -EINVAL;
+    }
+
+    if (!PAGE_ALIGNED(off)){
+        return -EINVAL;
+    }
+
+    if (addr != NULL && (uint32_t) addr < USER_MEM_LOW){
+        return -EINVAL;
+    }
+
+    if (addr != NULL && (uint32_t) addr + len > USER_MEM_HIGH){
+        return -EINVAL;
+    }
+
+    vnode_t *vnode;
+      
+    if (!(flags & MAP_ANON)){
+    
+        if (!valid_fd(fd)){
+            return -EBADF;
+        }
+
+        file_t *f = curproc->p_files[fd];
+        vnode = f->f_vnode;
+
+        if (vnode->vn_cdev != NULL || vnode->vn_bdev != NULL){
+            return -EACCES;
+        }
+
+        if ((flags & MAP_PRIVATE) && !(f->f_mode & FMODE_READ)){
+            return -EACCES;
+        }
+
+        if ((flags & MAP_SHARED) && (prot & PROT_WRITE) &&
+                !((f->f_mode & FMODE_READ) && f->f_mode & FMODE_WRITE))
+        {
+            return -EACCES;
+        }
+
+        if ((prot & PROT_WRITE) && !(f->f_mode & FMODE_WRITE)){
+            return -EACCES;
+        }
+    } else {
+        vnode = NULL;
+    }
+
+    int retval = vmmap_map(curproc->p_vmmap, vnode, ADDR_TO_PN(addr),
+            (len / PAGE_SIZE) + 1, prot, flags, off, VMMAP_DIR_HILO, NULL);
+
+    KASSERT(retval == 0 || retval == -ENOMEM);
+
+    return retval;
 }
 
 

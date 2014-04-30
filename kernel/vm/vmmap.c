@@ -424,7 +424,7 @@ vmmap_map(vmmap_t *map, vnode_t *file, uint32_t lopage, uint32_t npages,
         new_mmobj = anon_create();
         if (new_mmobj == NULL){
             vmarea_free(vma);
-            return -ENOSPC;
+            return -ENOMEM;
         }
     }
 
@@ -440,7 +440,7 @@ vmmap_map(vmmap_t *map, vnode_t *file, uint32_t lopage, uint32_t npages,
 
         if (shadow_obj == NULL){
             vmarea_free(vma);
-            return -ENOSPC;
+            return -ENOMEM;
         }
 
         shadow_obj->mmo_shadowed = new_mmobj;
