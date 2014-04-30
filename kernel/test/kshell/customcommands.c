@@ -13,7 +13,11 @@
 
 #ifdef __VM__
 static void * exec_func(int arg1, void *arg2){
-    char *func_to_run = (char *) arg2;
+    char **argv = (char **) arg2;
+
+    argv[arg1] = NULL;
+
+    char *func_to_run = argv[1];
 
     /* open stdin, stdout, stderr */
     KASSERT(do_open("/dev/tty0", O_RDONLY) == 0);
@@ -22,7 +26,7 @@ static void * exec_func(int arg1, void *arg2){
  
     char *empty_args[1] = {NULL};
     char *empty_envp[1] = {NULL};
-    kernel_execve(func_to_run, empty_args, empty_envp);
+    kernel_execve(func_to_run, argv, empty_envp);
 
     panic("returned when you weren't supposed to!");
 
@@ -33,13 +37,14 @@ int kshell_exec(kshell_t *ksh, int argc, char **argv){
     KASSERT(NULL != ksh);
     KASSERT(NULL != argv);
 
-    if (argc != 2){
+    if (argc < 2){
         kprintf(ksh, "Usage: exec <command>\n");
         return 1;
     }
 
     proc_t *execproc = proc_create("exec_proc");
-    kthread_t *execthread = kthread_create(execproc, exec_func, 0, argv[1]);
+
+    kthread_t *execthread = kthread_create(execproc, exec_func, argc, argv);
 
     sched_make_runnable(execthread);
 

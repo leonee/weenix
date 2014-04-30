@@ -21,6 +21,9 @@ in do_fork()
 in *_put()
     - is what I'm doing w.r.t. unlinking stuff safe?
 
+In general:
+    - wtf is this shadow daemon thing?
+
 -------------------
 
 Potential bugs:
