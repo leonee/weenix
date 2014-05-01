@@ -100,15 +100,11 @@ shadow_put(mmobj_t *o)
     KASSERT(o->mmo_refcount > o->mmo_nrespages && "refcount == nrespages already!");
     KASSERT(o->mmo_nrespages >= 0);
 
-    o->mmo_refcount--;
-
-    if (o->mmo_refcount == o->mmo_nrespages){
+    if (o->mmo_refcount == o->mmo_nrespages + 1){
         pframe_t *p;
         list_iterate_begin(&o->mmo_respages, p, pframe_t, pf_olink){
             pframe_unpin(p);
-            tlb_flush((uintptr_t) p->pf_addr);
-            list_remove(&p->pf_link);
-            list_remove(&p->pf_hlink);
+            pframe_free(p);
         } list_iterate_end();
 
         mmobj_t *shadowed_obj = o->mmo_shadowed;
@@ -118,6 +114,8 @@ shadow_put(mmobj_t *o)
         bottom_obj->mmo_ops->put(bottom_obj);
 
         slab_obj_free(shadow_allocator, o);
+    } else {
+        o->mmo_refcount--;
     }
 }
 
