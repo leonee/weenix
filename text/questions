@@ -3,15 +3,11 @@ in vfs_syscall functions
 -------------------
 
 in vmmap_map()
-    - do we need to do anything about vma_olink here?
     - is it okay to not set vma->vma_vmmap before calling
       mmap? we're also told to set the vma_vmmap field
       in insert.
+        - why the fuck not?
     - is it okay to have neither MAP_FIXED nor MAP_ANON, or both?
-
-in handle_pagefault()
-    - what does "don't forget about shadow objects, especially
-      copy-on-write magin!" mean?
 
 in do_fork()
     - does changing the regs_t actually change anything?
@@ -21,11 +17,7 @@ in do_fork()
 
 in *_put()
     - is what I'm doing w.r.t. unlinking stuff safe?
-
-in do_mmap()
-    - what is the error case for the address, length
-      or offset being bad?
-    - can we just ignore ENFILE, SIGSEGV, and SIGBUF?
+        - pframe_free!!!
 
 In general:
     - wtf is this shadow daemon thing?

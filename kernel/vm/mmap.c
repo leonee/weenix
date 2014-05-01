@@ -55,6 +55,10 @@ do_mmap(void *addr, size_t len, int prot, int flags,
         return -EINVAL;
     }
 
+    if (!(flags & MAP_ANON) && (flags & MAP_FIXED) && !PAGE_ALIGNED(addr)){
+        return -EINVAL;
+    }
+
     if (addr != NULL && (uint32_t) addr < USER_MEM_LOW){
         return -EINVAL;
     }
@@ -105,6 +109,8 @@ do_mmap(void *addr, size_t len, int prot, int flags,
     if (ret != NULL && retval >= 0){
         *ret = PN_TO_ADDR(vma->vma_start);
     }
+
+    tlb_flush_range((uintptr_t) PN_TO_ADDR(vma->vma_start), len);
 
     return retval;
 
