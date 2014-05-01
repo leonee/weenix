@@ -7,6 +7,7 @@ in vmmap_map()
     - is it okay to not set vma->vma_vmmap before calling
       mmap? we're also told to set the vma_vmmap field
       in insert.
+    - is it okay to have neither MAP_FIXED nor MAP_ANON, or both?
 
 in handle_pagefault()
     - what does "don't forget about shadow objects, especially

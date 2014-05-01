@@ -95,12 +95,20 @@ do_mmap(void *addr, size_t len, int prot, int flags,
         vnode = NULL;
     }
 
+    vmarea_t *vma;
+
     int retval = vmmap_map(curproc->p_vmmap, vnode, ADDR_TO_PN(addr),
-            (len / PAGE_SIZE) + 1, prot, flags, off, VMMAP_DIR_HILO, NULL);
+            (len / PAGE_SIZE) + 1, prot, flags, off, VMMAP_DIR_HILO, &vma);
 
     KASSERT(retval == 0 || retval == -ENOMEM);
 
+    if (ret != NULL && retval >= 0){
+        *ret = PN_TO_ADDR(vma->vma_start);
+    }
+
     return retval;
+
+    /*return (retval == 0) ? (uint32_t) PN_TO_ADDR(vma->vma_start) : (uint32_t) retval;*/
 }
 
 

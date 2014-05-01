@@ -342,8 +342,8 @@ static void assert_valid_mmap_input(vmmap_t *map, int lopage, int prot, int flag
     int map_type = flags & MAP_TYPE;
     KASSERT(map_type == MAP_SHARED || map_type == MAP_PRIVATE);
 
-    KASSERT(((flags & MAP_FIXED) || (flags & MAP_ANON)) &&
-            !(flags & MAP_FIXED && (flags & MAP_ANON)));
+    /*KASSERT(((flags & MAP_FIXED) || (flags & MAP_ANON)) &&*/
+            /*!(flags & MAP_FIXED && (flags & MAP_ANON)));*/
 
     KASSERT(off % PAGE_SIZE == 0);
 
