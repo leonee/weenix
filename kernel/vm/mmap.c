@@ -128,7 +128,22 @@ do_mmap(void *addr, size_t len, int prot, int flags,
 int
 do_munmap(void *addr, size_t len)
 {
-        NOT_YET_IMPLEMENTED("VM: do_munmap");
-        return -1;
+    if ((uintptr_t) addr < USER_MEM_LOW || (uintptr_t) addr + len > USER_MEM_HIGH){
+        return -EINVAL;
+    }
+
+    if (len == 0){
+        return -EINVAL;
+    }
+
+    if (!PAGE_ALIGNED(addr)){
+        return -EINVAL; 
+    }
+
+    int ret = vmmap_remove(curproc->p_vmmap, ADDR_TO_PN(addr), len / PAGE_SIZE);
+
+    tlb_flush_range((uintptr_t) addr, len);
+
+    return ret;
 }
 

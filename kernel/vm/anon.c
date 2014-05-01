@@ -87,7 +87,6 @@ anon_put(mmobj_t *o)
     KASSERT(o->mmo_refcount > o->mmo_nrespages && "refcount == nrespages already!");
     KASSERT(o->mmo_nrespages >= 0);
 
-
     if (o->mmo_refcount == o->mmo_nrespages + 1){
         pframe_t *p;
         list_iterate_begin(&o->mmo_respages, p, pframe_t, pf_olink){

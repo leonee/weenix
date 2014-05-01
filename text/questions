@@ -15,9 +15,14 @@ in do_fork()
     - isn't the cwd set automatically?
     - how do we give two return values?
 
-in *_put()
-    - is what I'm doing w.r.t. unlinking stuff safe?
-        - pframe_free!!!
+in shadow_fillpage()
+    - what's this about using the page identified by pf->pf_obj?
+
+in do_mmap()
+    - do we care about SIGBUS and SIGSEGV?
+
+in do_munmap()
+    - does len have to be page aligned?
 
 In general:
     - wtf is this shadow daemon thing?
