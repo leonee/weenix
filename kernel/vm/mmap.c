@@ -78,10 +78,6 @@ do_mmap(void *addr, size_t len, int prot, int flags,
         file_t *f = curproc->p_files[fd];
         vnode = f->f_vnode;
 
-        if (vnode->vn_cdev != NULL || vnode->vn_bdev != NULL){
-            return -EACCES;
-        }
-
         if ((flags & MAP_PRIVATE) && !(f->f_mode & FMODE_READ)){
             return -EACCES;
         }

@@ -18,6 +18,7 @@ in shadow_fillpage()
 
 in do_mmap()
     - do we care about SIGBUS and SIGSEGV?
+    - what's the deal with not being a regular file?
 
 in do_munmap()
     - does len have to be page aligned?
