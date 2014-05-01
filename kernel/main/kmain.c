@@ -224,11 +224,11 @@ idleproc_run(int arg1, void *arg2)
             panic("unable to create tty2\n");
         }
 
-        if (do_mknod("/dev/null", S_IFBLK, MEM_NULL_DEVID) < 0){
+        if (do_mknod("/dev/null", S_IFCHR, MEM_NULL_DEVID) < 0){
             panic("unable to create /dev/null");
         } 
 
-        if (do_mknod("/dev/zero", S_IFBLK, MEM_ZERO_DEVID) < 0){
+        if (do_mknod("/dev/zero", S_IFCHR, MEM_ZERO_DEVID) < 0){
             panic("unable to create /dev/zero");
         }
     } else {
