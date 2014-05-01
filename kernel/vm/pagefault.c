@@ -83,9 +83,9 @@ handle_pagefault(uintptr_t vaddr, uint32_t cause)
         panic("returned from do_exit");
     }
 
-    if (vma->vma_flags == MAP_PRIVATE){
-        panic("not handling that yet");
-    }
+/*    if (vma->vma_flags == MAP_PRIVATE){*/
+        /*panic("not handling that yet");*/
+    /*}*/
 
     pframe_t *p;
     int forwrite = (cause & FAULT_WRITE) ? 1 : 0;
