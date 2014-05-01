@@ -10,10 +10,8 @@ in vmmap_map()
     - is it okay to have neither MAP_FIXED nor MAP_ANON, or both?
 
 in do_fork()
-    - does changing the regs_t actually change anything?
-    - how does the reg struct get passed to userland_entry?
-    - isn't the cwd set automatically?
-    - how do we give two return values?
+    - how do we return two values?
+    - do we have to copy the entire stack over?
 
 in shadow_fillpage()
     - what's this about using the page identified by pf->pf_obj?
