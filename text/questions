@@ -25,6 +25,7 @@ in do_munmap()
 
 In general:
     - wtf is this shadow daemon thing?
+    - do non-shadow objects have their vma_olink fields set?
 
 -------------------
 

@@ -54,7 +54,7 @@ static void assert_vma_state(vmarea_t *oldvma, vmarea_t *newvma, vmmap_t *newvmm
     KASSERT(list_link_is_linked(&oldvma->vma_plink));
     KASSERT(list_link_is_linked(&newvma->vma_plink));
     /* TODO is this next assertion correct? */
-    KASSERT(list_link_is_linked(&oldvma->vma_olink));
+    /*KASSERT(list_link_is_linked(&oldvma->vma_olink));*/
     KASSERT(!list_link_is_linked(&newvma->vma_olink));
 }
 
