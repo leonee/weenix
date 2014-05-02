@@ -56,6 +56,49 @@
 int
 do_brk(void *addr, void **ret)
 {
-        NOT_YET_IMPLEMENTED("VM: do_brk");
+    KASSERT(ret != NULL);
+
+    if (addr == NULL || addr == curproc->p_brk){
+        *ret = curproc->p_brk;
         return 0;
+    }
+
+    uint32_t old_brk = (uint32_t) curproc->p_start_brk;
+
+    if ((uint32_t) addr < old_brk || (uint32_t) addr > USER_MEM_HIGH){
+        return -ENOMEM;
+    }
+
+    if (addr > curproc->p_brk){
+
+        /* the first page of the new brk area that isn't part of the vma
+         * for the brk area already. If brk isn't page aligned, then the page
+         * that it lies in is already mapped, so we add one to it's page number
+         * to find the first page not included in the brk area's vma
+         */
+        uint32_t first_new_page = ADDR_TO_PN(old_brk) + !PAGE_ALIGNED(old_brk);
+
+        /* exclusive */
+        uint32_t brk_end_page = ADDR_TO_PN(addr) + !PAGE_ALIGNED(addr);
+
+        uint32_t npages = brk_end_page - first_new_page;
+
+        if (!vmmap_is_range_empty(curproc->p_vmmap, first_new_page, npages)){
+            return -ENOMEM;
+        }
+
+        vmarea_t *vma =
+            vmmap_lookup(curproc->p_vmmap, ADDR_TO_PN(curproc->p_start_brk));
+
+        /* try to catch off-by-one errors by making sure the last page in 
+         * the new brk area doesn't have a mapping */
+        KASSERT(vmmap_is_range_empty(curproc->p_vmmap, brk_end_page - 1, 1));
+
+        vma->vma_end = brk_end_page; 
+        curproc->p_brk = addr;
+    } else {
+        panic("nyi");
+    }
+
+    return 0;
 }
