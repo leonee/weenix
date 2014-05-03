@@ -142,8 +142,35 @@ sys_write(write_args_t *arg)
 static int
 sys_getdents(getdents_args_t *arg)
 {
-        NOT_YET_IMPLEMENTED("VM: sys_getdents");
+    getdents_args_t kern_args;
+    int err;
+
+    if ((err = copy_from_user(&kern_args, arg, sizeof(getdents_args_t))) < 0){
+        curthr->kt_errno = -err;
         return -1;
+    }
+
+    dirent_t d;
+    uint32_t ndirents = kern_args.count / sizeof(dirent_t);
+
+    int total_bytes_read = 0;
+
+    uint32_t i;
+    for (i = 0; i < ndirents; i++){
+        int bytes_read = do_getdent(kern_args.fd, &d);
+
+        if (bytes_read < 0){
+            curthr->kt_errno = -bytes_read;
+            return -1;
+        } else if (bytes_read == 0){
+            break;
+        }
+
+        copy_to_user(kern_args.dirp + (sizeof(dirent_t) * i), &d, bytes_read);
+        total_bytes_read += bytes_read;
+    }
+
+    return total_bytes_read;
 }
 
 #ifdef __MOUNTING__
