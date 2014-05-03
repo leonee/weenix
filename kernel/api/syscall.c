@@ -166,7 +166,7 @@ sys_getdents(getdents_args_t *arg)
             break;
         }
 
-        copy_to_user(kern_args.dirp + (sizeof(dirent_t) * i), &d, bytes_read);
+        copy_to_user(kern_args.dirp + i, &d, bytes_read);
         total_bytes_read += bytes_read;
     }
 

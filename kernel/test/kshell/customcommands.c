@@ -26,7 +26,7 @@ static void * exec_func(int arg1, void *arg2){
  
     char *empty_args[1] = {NULL};
     char *empty_envp[1] = {NULL};
-    kernel_execve(func_to_run, argv, empty_envp);
+    kernel_execve(func_to_run, argv + 1, empty_envp);
 
     panic("returned when you weren't supposed to!");
 
