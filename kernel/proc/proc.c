@@ -152,7 +152,7 @@ proc_create(char *name)
         p->p_files[j] = NULL;
     } 
 
-    if (p->p_pid > 2){
+    if (p->p_pid > 3){
         p->p_cwd = p->p_pproc->p_cwd;
         vref(p->p_cwd);
     } else {
