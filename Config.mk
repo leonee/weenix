@@ -46,7 +46,7 @@
         UPREEMPT=0 # userland preemption
              MTP=0 # multiple kernel threads per process
            PIPES=0 # pipe(2) functionality
-         SHADOWD=0 # shadow page cleanup
+         SHADOWD=1 # shadow page cleanup
 
 # Boolean options specified in this specified in this file that should be
 # included as definitions at compile time
