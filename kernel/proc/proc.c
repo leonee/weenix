@@ -114,6 +114,7 @@ proc_create(char *name)
     p->p_pagedir = pt_create_pagedir(); 
 
     if (p->p_pagedir == NULL){
+        slab_obj_free(proc_allocator, p);
         return NULL;
     }
   
