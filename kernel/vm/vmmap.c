@@ -629,6 +629,10 @@ vmmap_is_range_empty(vmmap_t *map, uint32_t startvfn, uint32_t npages)
 {
     KASSERT(map != NULL);
 
+    if (npages == 0){
+        return 1;
+    }
+
     uint32_t endvfn = startvfn + npages;
 
     vmarea_t *curr;

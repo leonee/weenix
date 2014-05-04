@@ -37,3 +37,5 @@ Potential bugs:
       size is still as if the entire write suceeded
 
     - Address space before/after list in vmmap_find_range
+
+    - not flushing the TLB in vmmap_remove

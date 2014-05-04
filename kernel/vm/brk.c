@@ -11,6 +11,10 @@
 
 #include "proc/proc.h"
 
+static uint32_t max(uint32_t a, uint32_t b){
+    return (a >= b) ? a : b;
+}
+
 /*
  * This function implements the brk(2) system call.
  *
@@ -120,7 +124,7 @@ do_brk(void *addr, void **ret)
                     PROT_READ | PROT_WRITE, 
                     MAP_PRIVATE, 0, VMMAP_DIR_LOHI, &vma);
         } else {
-            vma->vma_end = brk_end_page;
+            vma->vma_end = max(brk_end_page, vma->vma_end);
         }
     }
 
