@@ -98,7 +98,7 @@ do_brk(void *addr, void **ret)
         uint32_t first_new_page = ADDR_TO_PN(old_brk) + !PAGE_ALIGNED(old_brk);
 
         /* exclusive */
-        brk_end_page = ADDR_TO_PN(addr) - PAGE_ALIGNED(addr);
+        brk_end_page = ADDR_TO_PN(addr) + !PAGE_ALIGNED(addr);
 
         uint32_t npages = brk_end_page - first_new_page;
 
@@ -108,13 +108,14 @@ do_brk(void *addr, void **ret)
 
         /* try to catch off-by-one errors by making sure the last page in 
          * the new brk area doesn't have a mapping */
-        KASSERT(npages == 0 || vmmap_is_range_empty(curproc->p_vmmap, brk_end_page - 1, 1));
+        KASSERT(npages == 0 ||
+                vmmap_is_range_empty(curproc->p_vmmap, brk_end_page - 1, 1));
 
         vmarea_t *vma =
             vmmap_lookup(curproc->p_vmmap, ADDR_TO_PN(curproc->p_start_brk));
 
         if (vma == NULL){
-            vmmap_map(curproc->p_vmmap, NULL, ADDR_TO_PN(curproc->p_brk),
+            vmmap_map(curproc->p_vmmap, NULL, ADDR_TO_PN(curproc->p_start_brk),
                     brk_end_page - ADDR_TO_PN(curproc->p_start_brk),
                     PROT_READ | PROT_WRITE, 
                     MAP_PRIVATE, 0, VMMAP_DIR_LOHI, &vma);
