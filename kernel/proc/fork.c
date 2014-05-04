@@ -297,6 +297,11 @@ static void unmap_pagetable(){
     pt_unmap_range(curproc->p_pagedir, USER_MEM_LOW, USER_MEM_HIGH);
 }
 
+static void set_brk_vals(proc_t *p){
+    p->p_brk = curproc->p_brk;
+    p->p_start_brk = curproc->p_start_brk;
+}
+
 /*
  * The implementation of fork(2). Once this works,
  * you're practically home free. This is what the
@@ -328,8 +333,8 @@ do_fork(struct regs *regs)
     }
 
     copy_filetable(childproc);
-
     unmap_pagetable();
+    set_brk_vals(childproc);
 
     sched_make_runnable(newthr);
 
