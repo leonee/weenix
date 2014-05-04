@@ -74,12 +74,12 @@ handle_pagefault(uintptr_t vaddr, uint32_t cause)
     vmarea_t *vma = vmmap_lookup(curproc->p_vmmap, ADDR_TO_PN(vaddr));
 
     if (vma == NULL){
-        do_exit(-EFAULT);
+        do_exit(EFAULT);
         panic("returned from do_exit");
     }
 
     if(!has_valid_permissions(vma, cause)){
-        do_exit(-EFAULT);
+        do_exit(EFAULT);
         panic("returned from do_exit");
     }
 
