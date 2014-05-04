@@ -24,6 +24,11 @@ static int has_valid_permissions(vmarea_t *vma, uint32_t cause){
         return 0;
     }
 
+    if (!((cause & FAULT_WRITE) || (cause & FAULT_EXEC))
+            && !(vma->vma_prot & PROT_READ)){
+        return 0;
+    }
+
     if ((cause & FAULT_WRITE) && !(vma->vma_prot & PROT_WRITE)){
         return 0;
     }
