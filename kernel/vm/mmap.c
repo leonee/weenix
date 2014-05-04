@@ -102,7 +102,8 @@ do_mmap(void *addr, size_t len, int prot, int flags,
     vmarea_t *vma;
 
     int retval = vmmap_map(curproc->p_vmmap, vnode, ADDR_TO_PN(addr),
-            (len / PAGE_SIZE) + 1, prot, flags, off, VMMAP_DIR_HILO, &vma);
+            (uint32_t) PAGE_ALIGN_UP(len) / PAGE_SIZE, prot, flags, off,
+            VMMAP_DIR_HILO, &vma);
 
     KASSERT(retval == 0 || retval == -ENOMEM);
 
@@ -137,7 +138,8 @@ do_munmap(void *addr, size_t len)
         return -EINVAL; 
     }
 
-    int ret = vmmap_remove(curproc->p_vmmap, ADDR_TO_PN(addr), len / PAGE_SIZE);
+    int ret = vmmap_remove(curproc->p_vmmap, ADDR_TO_PN(addr),
+            (uint32_t) PAGE_ALIGN_UP(len) / PAGE_SIZE);
 
     tlb_flush_range((uintptr_t) addr, len);
 
