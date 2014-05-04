@@ -564,6 +564,10 @@ static vmarea_t *vmarea_clone(vmarea_t *old_vma){
 int
 vmmap_remove(vmmap_t *map, uint32_t lopage, uint32_t npages)
 {
+    if (npages == 0){
+        return 0;
+    }
+
     list_t *list = &map->vmm_list;
     list_link_t *currlink = list->l_next;
 
@@ -576,7 +580,7 @@ vmmap_remove(vmmap_t *map, uint32_t lopage, uint32_t npages)
         switch (overlap){
             case NO_OVERLAP:
                 if (vma->vma_start > lopage + npages){
-                    return 0;
+                    goto finished;
                 }
                 break;
             case CASE_1:; /* empty statement so this compiles */
@@ -608,6 +612,10 @@ vmmap_remove(vmmap_t *map, uint32_t lopage, uint32_t npages)
         }
         currlink = nextlink;
     }
+
+finished:
+    pt_unmap_range(curproc->p_pagedir, (uint32_t) PN_TO_ADDR(lopage),
+            (uint32_t) PN_TO_ADDR(lopage + npages));
     
     return 0;
 }
