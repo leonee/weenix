@@ -639,7 +639,7 @@ vmmap_is_range_empty(vmmap_t *map, uint32_t startvfn, uint32_t npages)
 
     list_iterate_begin(&map->vmm_list, curr, vmarea_t, vma_plink){
         if ((startvfn >= curr->vma_start && startvfn < curr->vma_end) ||
-            (endvfn >= curr->vma_start && endvfn < curr->vma_end) ||
+            (endvfn > curr->vma_start && endvfn <= curr->vma_end) ||
             (startvfn < curr->vma_start && endvfn >= curr->vma_end))
         {
             return 0;
