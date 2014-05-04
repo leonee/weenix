@@ -108,7 +108,7 @@ do_brk(void *addr, void **ret)
 
         /* try to catch off-by-one errors by making sure the last page in 
          * the new brk area doesn't have a mapping */
-        KASSERT(vmmap_is_range_empty(curproc->p_vmmap, brk_end_page - 1, 1));
+        KASSERT(npages == 0 || vmmap_is_range_empty(curproc->p_vmmap, brk_end_page - 1, 1));
 
         vmarea_t *vma =
             vmmap_lookup(curproc->p_vmmap, ADDR_TO_PN(curproc->p_start_brk));
