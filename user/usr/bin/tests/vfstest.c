@@ -801,7 +801,7 @@ vfstest_s5fs_vm(void)
         /* Link/unlink error cases */
         syscall_fail(link("oldchld", "newchld"), EEXIST);
         syscall_fail(link("oldchld", LONGNAME), ENAMETOOLONG);
-        syscall_fail(link("parent", "newchld"), EPERM);
+        syscall_fail(link("parent", "newchld"), EEXIST);
 
         /* only rename test */
         /*syscall_success(rename("oldchld", "newchld"));*/

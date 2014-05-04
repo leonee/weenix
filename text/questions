@@ -23,6 +23,9 @@ in do_mmap()
 in do_munmap()
     - does len have to be page aligned?
 
+in vfstest_s5fs_vm()
+    - is it okay to change line 804 to expect EEXIST?
+
 In general:
     - wtf is this shadow daemon thing?
     - do non-shadow objects have their vma_olink fields set?
