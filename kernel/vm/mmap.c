@@ -67,11 +67,15 @@ do_mmap(void *addr, size_t len, int prot, int flags,
         return -EINVAL;
     }
 
+    if (addr == 0 && (flags & MAP_FIXED)){
+        return -EINVAL;
+    }
+
     vnode_t *vnode;
       
     if (!(flags & MAP_ANON)){
     
-        if (!valid_fd(fd)){
+        if (!valid_fd(fd) || curproc->p_files[fd] == NULL){
             return -EBADF;
         }
 
@@ -104,13 +108,10 @@ do_mmap(void *addr, size_t len, int prot, int flags,
 
     if (ret != NULL && retval >= 0){
         *ret = PN_TO_ADDR(vma->vma_start);
+        tlb_flush_range((uintptr_t) PN_TO_ADDR(vma->vma_start), len);
     }
 
-    tlb_flush_range((uintptr_t) PN_TO_ADDR(vma->vma_start), len);
-
     return retval;
-
-    /*return (retval == 0) ? (uint32_t) PN_TO_ADDR(vma->vma_start) : (uint32_t) retval;*/
 }
 
 
@@ -124,7 +125,7 @@ do_mmap(void *addr, size_t len, int prot, int flags,
 int
 do_munmap(void *addr, size_t len)
 {
-    if ((uintptr_t) addr < USER_MEM_LOW || (uintptr_t) addr + len > USER_MEM_HIGH){
+    if ((uintptr_t) addr < USER_MEM_LOW || USER_MEM_HIGH - (uint32_t) addr < len){
         return -EINVAL;
     }
 

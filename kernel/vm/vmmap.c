@@ -396,7 +396,7 @@ vmmap_map(vmmap_t *map, vnode_t *file, uint32_t lopage, uint32_t npages,
         starting_page = vmmap_find_range(map, npages, dir);
         if (starting_page < 0){
             vmarea_free(vma);
-            return starting_page;
+            return -ENOMEM;
         }
     }
 
