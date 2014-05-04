@@ -251,7 +251,7 @@ proc_cleanup(int status)
         }
     }
 
-    if (curproc->p_pid != 2){
+    if (curproc->p_pid != 3){
         KASSERT(curproc->p_cwd != NULL && "cwd is null");
         vput(curproc->p_cwd);
         curproc->p_cwd = NULL;
