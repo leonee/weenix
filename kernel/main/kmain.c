@@ -235,6 +235,11 @@ idleproc_run(int arg1, void *arg2)
         KASSERT(mkdir_res == -EEXIST && "wrong type of error when making /dev");
     }
 
+    int mktmp_res = do_mkdir("/tmp");
+
+    KASSERT((mkdir_res == 0 || mkdir_res == -EEXIST) && "wront type of error \
+            making /tmp");
+
     /*kmutex_init(&lookup_mutex);*/
 
 #endif
