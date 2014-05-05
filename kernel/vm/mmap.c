@@ -63,7 +63,11 @@ do_mmap(void *addr, size_t len, int prot, int flags,
         return -EINVAL;
     }
 
-    if (addr != NULL && (uint32_t) addr + len > USER_MEM_HIGH){
+    if (len > USER_MEM_HIGH){
+        return -EINVAL;
+    }
+
+    if (addr != NULL && len > USER_MEM_HIGH - (uint32_t) addr){
         return -EINVAL;
     }
 
