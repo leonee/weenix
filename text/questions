@@ -29,6 +29,8 @@ in vfstest_s5fs_vm()
 In general:
     - wtf is this shadow daemon thing?
     - do non-shadow objects have their vma_olink fields set?
+    - In mmap(), munmap(), and vmmap_remove(), should I be invalidating
+page table entries?
 
 -------------------
 

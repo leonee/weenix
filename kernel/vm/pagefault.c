@@ -94,7 +94,7 @@ handle_pagefault(uintptr_t vaddr, uint32_t cause)
             vma->vma_start + vma->vma_off, forwrite, &p);   
 
     if (lookup_res < 0){
-        do_exit(lookup_res);
+        do_exit(EFAULT);
         panic("returned from do_exit");
     }
 
@@ -104,7 +104,7 @@ handle_pagefault(uintptr_t vaddr, uint32_t cause)
         pframe_unpin(p);
 
         if (dirty_res < 0){
-            do_exit(dirty_res);
+            do_exit(EFAULT);
             panic("returned from do_exit");
         }
     }
