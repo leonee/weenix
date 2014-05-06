@@ -99,8 +99,7 @@ do_brk(void *addr, void **ret)
          * that it lies in is already mapped, so we add one to it's page number
          * to find the first page not included in the brk area's vma
          */
-        uint32_t first_new_page = ADDR_TO_PN(PAGE_ALIGN_UP(old_brk));
-
+        uint32_t first_new_page = -1;
         /* exclusive */
         brk_end_page = ADDR_TO_PN(PAGE_ALIGN_UP(addr));
 
@@ -110,10 +109,12 @@ do_brk(void *addr, void **ret)
         uint32_t npages;
        
         if (vma != NULL && brk_end_page > vma->vma_end){
+            first_new_page = vma->vma_end;
             npages = brk_end_page - vma->vma_end;
         } else if (vma != NULL){
             npages = 0;
         } else {
+            first_new_page = ADDR_TO_PN(PAGE_ALIGN_UP(old_brk));
             npages = brk_end_page - first_new_page;
         }
 
