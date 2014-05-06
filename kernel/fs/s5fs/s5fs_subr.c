@@ -252,19 +252,23 @@ s5_write_file(vnode_t *vnode, off_t seek, const char *bytes, size_t len)
     }
 
     /* extend file size, if necessary */
-    if (seek + len > (unsigned) vnode->vn_len){
-        vnode->vn_len = seek + len;
-        VNODE_TO_S5INODE(vnode)->s5_size = vnode->vn_len;
-        s5_dirty_inode(VNODE_TO_S5FS(vnode), VNODE_TO_S5INODE(vnode));
-    }
+    uint32_t newlength = max(seek + len, vnode->vn_len);
+/*    if (seek + len > (unsigned) vnode->vn_len){*/
+        /*vnode->vn_len = seek + len;*/
+        /*VNODE_TO_S5INODE(vnode)->s5_size = vnode->vn_len;*/
+        /*s5_dirty_inode(VNODE_TO_S5FS(vnode), VNODE_TO_S5INODE(vnode));*/
+    /*}*/
 
     off_t start_pos = seek;
-    off_t end_pos = min(seek + len, vnode->vn_len);
+    /*off_t end_pos = min(seek + len, vnode->vn_len);*/
+    off_t end_pos = min(seek + len, newlength);
 
     unsigned int srcpos = 0;
     int get_res;
     int write_size;
     pframe_t *p;
+
+    uint32_t err = 0;
 
     while (srcpos < len){
         int data_offset = S5_DATA_OFFSET(seek);
@@ -273,7 +277,8 @@ s5_write_file(vnode_t *vnode, off_t seek, const char *bytes, size_t len)
 
         if (get_res < 0){
             dbg(DBG_S5FS, "error getting page\n");
-            return get_res;
+            err = get_res;
+            break;
         }
 
         write_size = min(PAGE_SIZE - data_offset, end_pos - seek);
@@ -283,14 +288,21 @@ s5_write_file(vnode_t *vnode, off_t seek, const char *bytes, size_t len)
         int dirty_res = pframe_dirty(p);
 
         if (dirty_res < 0){
-            return dirty_res;
+            err = dirty_res;
+            break;
         }
 
         srcpos += write_size;
         seek += write_size; 
     }
 
-    return srcpos;
+    if (seek > vnode->vn_len){
+        vnode->vn_len = seek;
+        VNODE_TO_S5INODE(vnode)->s5_size = vnode->vn_len;
+        s5_dirty_inode(VNODE_TO_S5FS(vnode), VNODE_TO_S5INODE(vnode));
+    }
+
+    return err ? err : srcpos;
 }
 
 /*

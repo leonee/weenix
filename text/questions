@@ -19,6 +19,8 @@ in shadow_fillpage()
 in do_munmap()
     - does len have to be page aligned?
 
+-----------------------------------------
+
 In general:
     - do non-shadow objects have their vma_olink fields set?
     - In mmap(), munmap(), and vmmap_remove(), should I be invalidating
@@ -29,6 +31,9 @@ in kthread_cancel()
 
 in do_waitpid_any()
     - is it okay that we have to have a while loop?
+
+in sys_read()
+    - do we have to do this in a loop?
 
 -------------------
 
