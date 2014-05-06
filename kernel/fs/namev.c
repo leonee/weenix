@@ -210,10 +210,6 @@ open_namev(const char *pathname, int flag, vnode_t **res_vnode, vnode_t *base)
        }
     } else if (lookup_res < 0){
         ret_val = lookup_res;
-    } else if (flag & O_CREAT){
-        ret_val = -EEXIST;
-        vput(*res_vnode);
-        *res_vnode = NULL;
     } else if ((*res_vnode)->vn_ops->mkdir != NULL &&
             ((flag & O_WRONLY) || (flag & O_RDWR))){
         
