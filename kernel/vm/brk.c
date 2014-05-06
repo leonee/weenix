@@ -73,7 +73,7 @@ do_brk(void *addr, void **ret)
 
     uint32_t old_brk = (uint32_t) curproc->p_brk;
 
-    int brk_end_page;
+    uint32_t brk_end_page;
 
     if (addr <= curproc->p_brk){
         /* if it's not page-aligned, then addr does not lie on a page
@@ -104,19 +104,22 @@ do_brk(void *addr, void **ret)
         /* exclusive */
         brk_end_page = ADDR_TO_PN(PAGE_ALIGN_UP(addr));
 
-        uint32_t npages = brk_end_page - first_new_page;
+        vmarea_t *vma =
+            vmmap_lookup(curproc->p_vmmap, ADDR_TO_PN(curproc->p_start_brk));
+
+        uint32_t npages;
+       
+        if (vma != NULL && brk_end_page > vma->vma_end){
+            npages = brk_end_page - vma->vma_end;
+        } else if (vma != NULL){
+            npages = 0;
+        } else {
+            npages = brk_end_page - first_new_page;
+        }
 
         if (!vmmap_is_range_empty(curproc->p_vmmap, first_new_page, npages)){
             return -ENOMEM;
         }
-
-        /* try to catch off-by-one errors by making sure the last page in 
-         * the new brk area doesn't have a mapping */
-        KASSERT(npages == 0 ||
-                vmmap_is_range_empty(curproc->p_vmmap, brk_end_page - 1, 1));
-
-        vmarea_t *vma =
-            vmmap_lookup(curproc->p_vmmap, ADDR_TO_PN(curproc->p_start_brk));
 
         if (vma == NULL){
             vmmap_map(curproc->p_vmmap, NULL, ADDR_TO_PN(curproc->p_start_brk),
