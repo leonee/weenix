@@ -346,12 +346,13 @@ initproc_run(int arg1, void *arg2)
 {
     /*run_vmm_tests();*/
 
-    kshell_add_command("exec", kshell_exec, "executes a given command");
+    /*kshell_add_command("exec", kshell_exec, "executes a given command");*/
 
-    char *empty_args[1] = {NULL};
+    char *empty_args[2] = {"init", NULL};
     char *empty_envp[1] = {NULL};
     /*kernel_execve("/usr/bin/hello", empty_args, empty_envp);*/
     kernel_execve("/sbin/init", empty_args, empty_envp);
+    panic("oh shit");
     
     /*run_proc_tests();*/
     /*run_tty_tests();*/

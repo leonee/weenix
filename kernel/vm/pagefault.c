@@ -40,6 +40,8 @@ static int has_valid_permissions(vmarea_t *vma, uint32_t cause){
     return 1;
 }
 
+size_t
+pt_mapping_info(const void *pt, char *buf, size_t osize);
 /*
  * This gets called by _pt_fault_handler in mm/pagetable.c The
  * calling function has already done a lot of error checking for

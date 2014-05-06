@@ -96,9 +96,9 @@ do_mmap(void *addr, size_t len, int prot, int flags,
             return -EACCES;
         }
 
-        if ((prot & PROT_WRITE) && !(f->f_mode & FMODE_WRITE)){
-            return -EACCES;
-        }
+       /* if ((prot & PROT_WRITE) && !(f->f_mode & FMODE_WRITE)){*/
+            /*return -EACCES;*/
+        /*}*/
     } else {
         vnode = NULL;
     }
@@ -113,13 +113,14 @@ do_mmap(void *addr, size_t len, int prot, int flags,
 
     if (ret != NULL && retval >= 0){
         *ret = PN_TO_ADDR(vma->vma_start);
-        tlb_flush_range((uintptr_t) PN_TO_ADDR(vma->vma_start),
-                (uint32_t) PAGE_ALIGN_UP(len) / PAGE_SIZE);
-
-        pt_unmap_range(curproc->p_pagedir, (uintptr_t) PN_TO_ADDR(vma->vma_start),
+    }
+    
+    pt_unmap_range(curproc->p_pagedir, (uintptr_t) PN_TO_ADDR(vma->vma_start),
                (uintptr_t) PN_TO_ADDR(vma->vma_start)
                + (uintptr_t) PAGE_ALIGN_UP(len));
-    }
+    
+    tlb_flush_range((uintptr_t) PN_TO_ADDR(vma->vma_start),
+                (uint32_t) PAGE_ALIGN_UP(len) / PAGE_SIZE);
 
     return retval;
 }
