@@ -302,6 +302,14 @@ static void set_brk_vals(proc_t *p){
     p->p_start_brk = curproc->p_start_brk;
 }
 
+static void cleanup_proc(proc_t *p){
+    list_remove(&p->p_list_link);
+    pt_destroy_pagedir(p->p_pagedir);
+    list_remove(&p->p_child_link);
+    vput(p->p_cwd);
+    vmmap_destroy(p->p_vmmap);
+}
+
 /*
  * The implementation of fork(2). Once this works,
  * you're practically home free. This is what the
@@ -321,15 +329,19 @@ do_fork(struct regs *regs)
     int err = copy_vmmap(childproc);
 
     if (err){
-        panic("nyi");
-        return err;
+        KASSERT(err == -ENOMEM);
+        cleanup_proc(childproc);
+        curthr->kt_errno = ENOMEM;
+        return -1;
     }
 
     kthread_t *newthr = setup_thread(childproc, regs);
 
     if (newthr == NULL){
-        panic("nyi");
-        return -ENOMEM;
+        vmmap_revert(&curproc->p_vmmap->vmm_list, &childproc->p_vmmap->vmm_list);
+        cleanup_proc(childproc);
+        curthr->kt_errno = ENOMEM;
+        return -1;
     }
 
     copy_filetable(childproc);

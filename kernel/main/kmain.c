@@ -167,6 +167,23 @@ bootstrap(int arg1, void *arg2)
     return NULL;
 }
 
+static void destroy_kshell_commands(){
+    list_t *commands = &kshell_commands_list;
+    list_link_t *link = commands->l_next;
+
+    while (link != commands){
+        kshell_command_t *cmd = list_item(link, kshell_command_t, kc_commands_link);
+
+        
+        
+        link = link->l_next;
+
+         if (cmd != NULL){
+            kshell_command_destroy(cmd);
+        }
+    }
+}
+
 /**
  * Once we're inside of idleproc_run(), we are executing in the context of the
  * first process-- a real context, so we can finally begin running
@@ -255,6 +272,8 @@ idleproc_run(int arg1, void *arg2)
     child = do_waitpid(-1, 0, &status);
     KASSERT(PID_INIT == child);
 
+    destroy_kshell_commands();
+
 #ifdef __MTP__
     kthread_reapd_shutdown();
 #endif
@@ -311,23 +330,6 @@ initproc_create(void)
     return init_thread;
 }
 
-static void destroy_kshell_commands(){
-    list_t *commands = &kshell_commands_list;
-    list_link_t *link = commands->l_next;
-
-    while (link != commands){
-        kshell_command_t *cmd = list_item(link, kshell_command_t, kc_commands_link);
-
-        
-        
-        link = link->l_next;
-
-         if (cmd != NULL){
-            kshell_command_destroy(cmd);
-        }
-    }
-}
-
 /**
  * The init thread's function changes depending on how far along your Weenix is
  * developed. Before VM/FI, you'll probably just want to have this run whatever
@@ -348,8 +350,8 @@ initproc_run(int arg1, void *arg2)
 
     char *empty_args[1] = {NULL};
     char *empty_envp[1] = {NULL};
-    kernel_execve("/usr/bin/kshell", empty_args, empty_envp);
-    /*kernel_execve("/sbin/init", empty_args, empty_envp);*/
+    /*kernel_execve("/usr/bin/kshell", empty_args, empty_envp);*/
+    kernel_execve("/sbin/init", empty_args, empty_envp);
     
     /*run_proc_tests();*/
     /*run_tty_tests();*/
@@ -363,32 +365,6 @@ initproc_run(int arg1, void *arg2)
     
     /*vfstest_main(1, NULL);   */
     
-    /*kshell_add_command("proctest", proctests, "tests proc code");*/
-
-    /*kshell_add_command("ar", kshell_ata_read, "tests ata_read");*/
-    /*kshell_add_command("aw", kshell_ata_write, "tests ata_write");*/
-
-    /*int err = 0;*/
-    /*kshell_t *ksh = kshell_create(0);*/
-    /*KASSERT(ksh && "did not create a kernel shell as expected");*/
-
-    /*while ((err = kshell_execute_next(ksh)) > 0);*/
-    /*KASSERT(err == 0 && "kernel shell exited with an error\n");*/
-    /*destroy_kshell_commands(); */
-    /*kshell_destroy(ksh);*/
-
-/*
-   list_t *children = &curproc->p_children; 
-   list_link_t *link;
-
-   
-   dbg_print("initproc children: \n");
-   for (link = children->l_next; link != children; link = link->l_next){
-       proc_t *p = list_item(link, proc_t, p_child_link);
-
-       dbg_print("%s\n", p->p_comm);
-   }
-   */
     return NULL;
 }
 

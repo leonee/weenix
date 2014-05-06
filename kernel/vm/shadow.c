@@ -65,6 +65,12 @@ shadow_init()
 mmobj_t *
 shadow_create()
 {
+/*    static uint32_t objects_created = 0;*/
+
+    /*if (objects_created++ % 10 == 0){*/
+        /*shadowd_wakeup();*/
+    /*}*/
+
     mmobj_t *newshadow = slab_obj_alloc(shadow_allocator);
 
     if (newshadow != NULL){
