@@ -42,6 +42,10 @@ static __attribute__((unused)) void syscall_init(void)
 }
 init_func(syscall_init);
 
+static uint32_t min(uint32_t a, uint32_t b){
+    return a < b ? a : b;
+}
+
 /*
  * this is one of the few sys_* functions you have to write. be sure to
  * check out the sys_* functions we have provided before trying to write
@@ -71,15 +75,27 @@ sys_read(read_args_t *arg)
         return -1;
     }
 
-    int bytes_read = do_read(kern_args.fd, tmpbuf, kern_args.nbytes);
+    uint32_t total_bytes_read = 0;
+    while (total_bytes_read < kern_args.nbytes && !err){
+        int bytes_to_read = min(kern_args.nbytes - total_bytes_read, PAGE_SIZE);
 
-    if (bytes_read < 0){
-        page_free(tmpbuf);
-        curthr->kt_errno = -bytes_read;
-        return -1;
+        int bytes_read = do_read(kern_args.fd, tmpbuf, bytes_to_read);
+
+        if (bytes_read < 0){
+            page_free(tmpbuf);
+            curthr->kt_errno = -bytes_read;
+            return -1;
+        }
+
+        err = copy_to_user((void *) ((uint32_t) kern_args.buf + total_bytes_read),
+                tmpbuf, bytes_read);
+
+        total_bytes_read += bytes_read;
+
+        if (bytes_read < bytes_to_read){
+            break;
+        }
     }
-
-    err = copy_to_user(kern_args.buf, tmpbuf, bytes_read);
 
     page_free(tmpbuf);
 
@@ -88,7 +104,7 @@ sys_read(read_args_t *arg)
         return -1;
     }
 
-    return bytes_read;
+    return total_bytes_read;
 }
 
 /*
