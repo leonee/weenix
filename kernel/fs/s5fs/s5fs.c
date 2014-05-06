@@ -671,8 +671,8 @@ s5fs_mkdir(vnode_t *dir, const char *name, size_t namelen)
     if (link_res < 0){
         dbg(DBG_S5FS, "error creating entry for \'.\' in new directory\n");
         /* TODO make sure we should be vputting */
+        /*s5_free_inode(child);*/
         vput(child);
-        s5_free_inode(child);
         kmutex_unlock(&child->vn_mutex);
         kmutex_unlock(&dir->vn_mutex);
         return link_res;
@@ -684,8 +684,8 @@ s5fs_mkdir(vnode_t *dir, const char *name, size_t namelen)
 
     if (link_res < 0){
         dbg(DBG_S5FS, "error creating entry for \'..\' in new directory\n");
+        /*s5_free_inode(child);*/
         vput(child);
-        s5_free_inode(child);
         kmutex_unlock(&child->vn_mutex);
         kmutex_unlock(&dir->vn_mutex);
         return link_res;
@@ -695,8 +695,8 @@ s5fs_mkdir(vnode_t *dir, const char *name, size_t namelen)
 
     if (link_res < 0){
         dbg(DBG_S5FS, "error creating entry for new directory in parent dir\n");
+        /*s5_free_inode(child);*/
         vput(child);
-        s5_free_inode(child);
         kmutex_unlock(&child->vn_mutex);
         kmutex_unlock(&dir->vn_mutex);
         return link_res;
