@@ -88,9 +88,9 @@ do_brk(void *addr, void **ret)
 
         vmmap_remove(curproc->p_vmmap, brk_end_page, npages);
 
-        curproc->p_brk = addr;
-        *ret = addr;
-        return 0;
+       /* curproc->p_brk = addr;*/
+        /**ret = addr;*/
+        /*return 0;*/
     } else {
         KASSERT(addr > curproc->p_brk);
 

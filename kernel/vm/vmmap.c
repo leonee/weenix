@@ -24,6 +24,8 @@
 #include "mm/mman.h"
 #include "mm/mmobj.h"
 
+#include "mm/tlb.h"
+
 #define MIN_PAGENUM ADDR_TO_PN(USER_MEM_LOW) /* inclusive */
 #define MAX_PAGENUM ADDR_TO_PN(USER_MEM_HIGH) /* exclusive */
 
@@ -614,6 +616,7 @@ vmmap_remove(vmmap_t *map, uint32_t lopage, uint32_t npages)
     }
 
 finished:
+    tlb_flush_range((uint32_t) PN_TO_ADDR(lopage), npages);
     pt_unmap_range(curproc->p_pagedir, (uint32_t) PN_TO_ADDR(lopage),
             (uint32_t) PN_TO_ADDR(lopage + npages));
     
