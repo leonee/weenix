@@ -471,7 +471,7 @@ s5fs_create(vnode_t *dir, const char *name, size_t namelen, vnode_t **result)
         vput(child);
         kmutex_unlock(&child->vn_mutex);
         kmutex_unlock(&dir->vn_mutex);
-        s5_free_inode(child);
+        /*s5_free_inode(child);*/
         return link_res;
     }
 
@@ -534,7 +534,7 @@ s5fs_mknod(vnode_t *dir, const char *name, size_t namelen, int mode, devid_t dev
         vput(child);
         kmutex_unlock(&child->vn_mutex);
         kmutex_unlock(&dir->vn_mutex);
-        s5_free_inode(child);
+        /*s5_free_inode(child);*/
         return link_res;
     }
 
