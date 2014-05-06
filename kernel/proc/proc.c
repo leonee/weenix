@@ -406,13 +406,14 @@ static void cleanup_child_proc(proc_t *p){
 static pid_t do_waitpid_any(int *status){
     proc_t *dead_child = find_dead_child();
 
-    if (dead_child == NULL){
+    while (dead_child == NULL){
         sched_cancellable_sleep_on(&curproc->p_wait);
 
         /* we only have to do this once, because this process
          * will only wake up if a child exits 
          */
         dead_child = find_dead_child();
+        /*KASSERT(dead_child != NULL);*/
     }
 
     cleanup_child_proc(dead_child);

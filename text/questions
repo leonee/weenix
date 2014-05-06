@@ -16,21 +16,19 @@ in do_fork()
 in shadow_fillpage()
     - what's this about using the page identified by pf->pf_obj?
 
-in do_mmap()
-    - do we care about SIGBUS and SIGSEGV?
-    - what's the deal with not being a regular file?
-
 in do_munmap()
     - does len have to be page aligned?
 
-in vfstest_s5fs_vm()
-    - is it okay to change line 804 to expect EEXIST?
-
 In general:
-    - wtf is this shadow daemon thing?
     - do non-shadow objects have their vma_olink fields set?
     - In mmap(), munmap(), and vmmap_remove(), should I be invalidating
 page table entries?
+
+in kthread_cancel()
+    - should my assertion actually be commented out?
+
+in do_waitpid_any()
+    - is it okay that we have to have a while loop?
 
 -------------------
 
@@ -39,5 +37,3 @@ Potential bugs:
       size is still as if the entire write suceeded
 
     - Address space before/after list in vmmap_find_range
-
-    - not flushing the TLB in vmmap_remove

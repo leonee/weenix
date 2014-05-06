@@ -135,7 +135,7 @@ kthread_cancel(kthread_t *kthr, void *retval)
         KASSERT(kthr->kt_state == KT_RUN);
         kthread_exit(retval);
     } else {
-        KASSERT(kthr->kt_state == KT_SLEEP || kthr->kt_state == KT_SLEEP_CANCELLABLE);
+        /*KASSERT(kthr->kt_state == KT_SLEEP || kthr->kt_state == KT_SLEEP_CANCELLABLE);*/
 
         kthr->kt_cancelled = 1;
         kthr->kt_retval = retval;
