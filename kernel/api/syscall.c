@@ -128,22 +128,40 @@ sys_write(write_args_t *arg)
         return -1;
     }
 
-    if ((err = copy_from_user(tmpbuf, kern_args.buf, kern_args.nbytes)) < 0){
-        page_free(tmpbuf);
+    uint32_t total_bytes_written = 0;
+    while (total_bytes_written < kern_args.nbytes && !err){
+        int bytes_to_write = min(kern_args.nbytes - total_bytes_written, PAGE_SIZE);
+
+        if ((err = copy_from_user(tmpbuf,
+                        (void *) ((uint32_t) kern_args.buf + total_bytes_written),
+                        bytes_to_write)) < 0)
+        {
+            page_free(tmpbuf);
+            curthr->kt_errno = -err;
+            return -1;
+        }
+
+        int bytes_written = do_write(kern_args.fd, tmpbuf, bytes_to_write);
+
+        if (bytes_written < 0){
+            err = bytes_written;
+        }
+
+        total_bytes_written += bytes_written;
+
+        if (bytes_written < bytes_to_write){
+            break;
+        }
+    }
+
+    page_free(tmpbuf);
+
+    if (err < 0){
         curthr->kt_errno = -err;
         return -1;
     }
 
-    int bytes_written = do_write(kern_args.fd, tmpbuf, kern_args.nbytes);
-
-    page_free(tmpbuf);
-
-    if (bytes_written < 0){
-        curthr->kt_errno = -bytes_written;
-        return -1;
-    }
-
-    return bytes_written;
+    return total_bytes_written;
 }
 
 /*
