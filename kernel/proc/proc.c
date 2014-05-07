@@ -197,7 +197,12 @@ static void reparent_all_children(list_t *children){
         proc_t *p = list_item(link, proc_t, p_child_link);
         link = link->l_next;
 
-        reparent_proc(p);
+        if (curproc == proc_initproc){
+            int status;
+            do_waitpid(p->p_pid, 0, &status);
+        } else {
+            reparent_proc(p);
+        }
     }
 }
 
@@ -232,7 +237,7 @@ proc_cleanup(int status)
     list_t *children = &curproc->p_children;
 
     if (!list_empty(children)){
-        KASSERT(curproc != proc_initproc && "initproc still has children!!!");
+        /*KASSERT(curproc != proc_initproc && "initproc still has children!!!");*/
         reparent_all_children(children);        
     }
 

@@ -80,7 +80,7 @@ void vmarea_cleanup(vmarea_t *vma){
     }
     list_remove(&vma->vma_plink);
 
-    if (vma->vma_olink.l_next != NULL || vma->vma_olink.l_prev != NULL){
+    if (list_link_is_linked(&vma->vma_olink)){
         list_remove(&vma->vma_olink);
     }
     vmarea_free(vma);

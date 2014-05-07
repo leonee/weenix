@@ -64,7 +64,7 @@
 # All debug statements
         #DBG = all
 # Change to this for no debug statements
-	   DBG =vmmap
+	   DBG =-all
 
 # terminal binary to use when opening a second terminal for gdb
         GDB_TERM=xterm
