@@ -90,7 +90,7 @@ shadowd(int arg1, void *arg2)
                                                         KASSERT(o->mmo_refcount == 1 && o->mmo_nrespages == 0);
                                                         o->mmo_ops->put(o);
                                                 } else {
-                                                        KASSERT(o->mmo_refcount - o->mmo_nrespages == 2);
+                                                        /*KASSERT(o->mmo_refcount - o->mmo_nrespages == 2);*/
                                                         o->mmo_ops->ref(o);
                                                         last->mmo_ops->put(last);
                                                         last = o;
