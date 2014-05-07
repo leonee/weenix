@@ -344,7 +344,7 @@ initproc_create(void)
 static void *
 initproc_run(int arg1, void *arg2)
 {
-    static char bullshit[5000];
+    static char bullshit[1000];
     /*run_vmm_tests();*/
 
     /*kshell_add_command("exec", kshell_exec, "executes a given command");*/

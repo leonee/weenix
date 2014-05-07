@@ -678,7 +678,10 @@ vmmap_read(vmmap_t *map, const void *vaddr, void *buf, size_t count)
 
         off_t off = vma->vma_off + (currvfn - vma->vma_start);
 
-        uint32_t pages_to_read = min(((count - destpos)/PAGE_SIZE) + 1,
+/*        uint32_t pages_to_read = min(((count - destpos)/PAGE_SIZE) + 1,*/
+                /*vma->vma_end - currvfn);*/
+
+        uint32_t pages_to_read = min(ADDR_TO_PN(PAGE_ALIGN_UP(count - destpos)),
                 vma->vma_end - currvfn);
 
         uint32_t i;
@@ -726,7 +729,10 @@ vmmap_write(vmmap_t *map, void *vaddr, const void *buf, size_t count)
 
         off_t off = vma->vma_off + (currvfn - vma->vma_start);
 
-        uint32_t pages_to_read = min(((count - srcpos)/PAGE_SIZE) + 1,
+/*        uint32_t pages_to_read = min(((count - srcpos)/PAGE_SIZE) + 1,*/
+                /*vma->vma_end - currvfn);*/
+
+        uint32_t pages_to_read = min(ADDR_TO_PN(PAGE_ALIGN_UP(count - srcpos)),
                 vma->vma_end - currvfn);
 
         uint32_t i;

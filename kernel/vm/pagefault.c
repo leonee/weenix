@@ -81,6 +81,8 @@ handle_pagefault(uintptr_t vaddr, uint32_t cause)
     vmarea_t *vma = vmmap_lookup(curproc->p_vmmap, ADDR_TO_PN(vaddr));
 
     if (vma == NULL){
+        dbg_print("here!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
+        dbginfo(DBG_VMMAP, vmmap_mapping_info, curproc->p_vmmap);
         do_exit(EFAULT);
         panic("returned from do_exit");
     }
