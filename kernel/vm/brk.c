@@ -73,13 +73,14 @@ do_brk(void *addr, void **ret)
 
     uint32_t old_brk = (uint32_t) curproc->p_brk;
 
-    uint32_t brk_end_page;
+    uint32_t brk_end_page = NULL;
 
     if (addr <= curproc->p_brk){
         /* if it's not page-aligned, then addr does not lie on a page
          * boundary, so we actually need to have our mapping include
          * the page that addr is in. This is exclusive, so it's the first
          * page to unmap */
+        KASSERT(brk_end_page == NULL);
         brk_end_page = ADDR_TO_PN(addr) + !PAGE_ALIGNED(addr);
         
         uint32_t old_brk_end_page = ADDR_TO_PN(old_brk) + !PAGE_ALIGNED(old_brk);
@@ -106,7 +107,7 @@ do_brk(void *addr, void **ret)
         vmarea_t *vma =
             vmmap_lookup(curproc->p_vmmap, ADDR_TO_PN(curproc->p_start_brk));
 
-        uint32_t npages;
+        uint32_t npages = 0;
        
         if (vma != NULL && brk_end_page > vma->vma_end){
             first_new_page = vma->vma_end;
