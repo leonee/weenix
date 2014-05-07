@@ -75,6 +75,12 @@ do_mmap(void *addr, size_t len, int prot, int flags,
         return -EINVAL;
     }
 
+/*    if ((!(flags & MAP_PRIVATE) && !(flags & MAP_SHARED))*/
+            /*|| ((flags & MAP_PRIVATE) && (flags & MAP_SHARED)))*/
+    /*{*/
+        /*return -EINVAL;*/
+    /*}*/
+
     vnode_t *vnode;
       
     if (!(flags & MAP_ANON)){
@@ -91,12 +97,12 @@ do_mmap(void *addr, size_t len, int prot, int flags,
         }
 
         if ((flags & MAP_SHARED) && (prot & PROT_WRITE) &&
-                !((f->f_mode & FMODE_READ) && f->f_mode & FMODE_WRITE))
+                !((f->f_mode & FMODE_READ) && (f->f_mode & FMODE_WRITE)))
         {
             return -EACCES;
         }
 
-       /* if ((prot & PROT_WRITE) && !(f->f_mode & FMODE_WRITE)){*/
+        /*if ((prot & PROT_WRITE) && (f->f_mode & FMODE_APPEND)){*/
             /*return -EACCES;*/
         /*}*/
     } else {

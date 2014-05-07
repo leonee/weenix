@@ -237,7 +237,7 @@ proc_cleanup(int status)
     list_t *children = &curproc->p_children;
 
     if (!list_empty(children)){
-        /*KASSERT(curproc != proc_initproc && "initproc still has children!!!");*/
+        KASSERT(curproc != proc_initproc && "initproc still has children!!!");
         reparent_all_children(children);        
     }
 
