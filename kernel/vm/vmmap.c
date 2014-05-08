@@ -461,11 +461,13 @@ vmmap_map(vmmap_t *map, vnode_t *file, uint32_t lopage, uint32_t npages,
         
         new_mmobj = shadow_obj;
 
-        list_insert_tail(&bottom_obj->mmo_un.mmo_vmas, &vma->vma_olink);
     }
 
     vma->vma_obj = new_mmobj;
     new_mmobj->mmo_ops->ref(new_mmobj);
+
+    mmobj_t *final_bottom_obj = mmobj_bottom_obj(vma->vma_obj);
+    list_insert_tail(&final_bottom_obj->mmo_un.mmo_vmas, &vma->vma_olink);
 
     vmmap_insert(map, vma);
 
