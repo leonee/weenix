@@ -166,7 +166,18 @@ proc_create(char *name)
     p->p_vmmap = vmmap_create();
 
     if (p->p_vmmap == NULL){
-        panic("congratulations! You kicked the can down the road and now have to deal with this case. Just roll back everything you've done (probably");
+        if (p->p_cwd != NULL){
+            vput(p->p_cwd);
+        }
+
+        if (list_link_is_linked(&p->p_child_link)){
+            list_remove(&p->p_child_link);
+        }
+
+        pt_destroy_pagedir(p->p_pagedir);
+        list_remove(&p->p_list_link);
+        slab_obj_free(proc_allocator, p);
+        return NULL;
     }
 
     p->p_vmmap->vmm_proc = p;
