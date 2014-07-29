@@ -1,0 +1,4 @@
+/bin/sh
+    - ls
+
+fork fails, and then exiting, leads to an assertion failure

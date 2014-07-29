@@ -122,8 +122,25 @@ fail:
  */
 int addr_perm(struct proc *p, const void *vaddr, int perm)
 {
-        NOT_YET_IMPLEMENTED("VM: ***none***");
+    vmarea_t *vma = vmmap_lookup(p->p_vmmap, ADDR_TO_PN(vaddr));
+
+    if (vma == NULL){
         return 0;
+    }
+
+    if ((perm & PROT_READ) && !(vma->vma_prot & PROT_READ)){
+        return 0;
+    }
+
+    if ((perm & PROT_WRITE) && !(vma->vma_prot & PROT_WRITE)){
+        return 0;
+    }
+
+    if ((perm & PROT_EXEC) && !(vma->vma_prot & PROT_EXEC)){
+        return 0;
+    }
+
+    return 1;
 }
 
 /*
@@ -137,6 +154,16 @@ int addr_perm(struct proc *p, const void *vaddr, int perm)
  */
 int range_perm(struct proc *p, const void *avaddr, size_t len, int perm)
 {
-        NOT_YET_IMPLEMENTED("VM: ***none***");
-        return 0;
+    uint32_t curraddr = (uint32_t) avaddr;
+    uint32_t end_addr = curraddr + len;
+
+    while (curraddr < end_addr){
+        if (!addr_perm(p, (void *) curraddr, perm)){
+            return 0;
+        }
+
+        curraddr += PAGE_SIZE;
+    }
+
+    return 1;
 }

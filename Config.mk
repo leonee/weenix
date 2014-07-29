@@ -13,8 +13,8 @@
      DRIVERS=1
          VFS=1
         S5FS=1
-          VM=0
-     DYNAMIC=0
+          VM=1
+     DYNAMIC=1
 # When you finish S5FS, first enable "VM"; once this is working, then enable
 # "DYNAMIC".
 
@@ -46,7 +46,7 @@
         UPREEMPT=0 # userland preemption
              MTP=0 # multiple kernel threads per process
            PIPES=0 # pipe(2) functionality
-         SHADOWD=0 # shadow page cleanup
+         SHADOWD=1 # shadow page cleanup
 
 # Boolean options specified in this specified in this file that should be
 # included as definitions at compile time
@@ -62,9 +62,9 @@
 # Debug message behavior. Note that this can be changed at runtime by
 # modifying the dbg_modes global variable.
 # All debug statements
-        DBG = all
+        #DBG = all
 # Change to this for no debug statements
-#       DBG =-all
+	   DBG =-all
 
 # terminal binary to use when opening a second terminal for gdb
         GDB_TERM=xterm

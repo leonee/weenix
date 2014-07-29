@@ -111,7 +111,7 @@ do_write(int fd, const void *buf, size_t nbytes)
         return -EBADF;
     }
 
-    if (f->f_vnode->vn_ops->read == NULL){
+    if (f->f_vnode->vn_ops->write == NULL){
         fput(f);
         return -EISDIR;
     }

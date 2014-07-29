@@ -17,6 +17,31 @@
 #include "vm/pagefault.h"
 #include "vm/vmmap.h"
 
+#include "mm/tlb.h"
+
+static int has_valid_permissions(vmarea_t *vma, uint32_t cause){
+    if (vma->vma_prot & PROT_NONE){
+        return 0;
+    }
+
+    if (!((cause & FAULT_WRITE) || (cause & FAULT_EXEC))
+            && !(vma->vma_prot & PROT_READ)){
+        return 0;
+    }
+
+    if ((cause & FAULT_WRITE) && !(vma->vma_prot & PROT_WRITE)){
+        return 0;
+    }
+
+    if ((cause & FAULT_EXEC) && !(vma->vma_prot & PROT_EXEC)){
+        return 0;
+    }
+
+    return 1;
+}
+
+size_t
+pt_mapping_info(const void *pt, char *buf, size_t osize);
 /*
  * This gets called by _pt_fault_handler in mm/pagetable.c The
  * calling function has already done a lot of error checking for
@@ -51,5 +76,57 @@
 void
 handle_pagefault(uintptr_t vaddr, uint32_t cause)
 {
-        NOT_YET_IMPLEMENTED("VM: handle_pagefault");
+    KASSERT(cause & FAULT_USER);
+
+    vmarea_t *vma = vmmap_lookup(curproc->p_vmmap, ADDR_TO_PN(vaddr));
+
+    if (vma == NULL){
+        dbg(DBG_VMMAP, "\n\n\nhere!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n\n\n");
+        dbginfo(DBG_VMMAP, vmmap_mapping_info, curproc->p_vmmap);
+        dbg(DBG_VMMAP, "\n");
+        do_exit(EFAULT);
+        panic("returned from do_exit");
+    }
+
+    if(!has_valid_permissions(vma, cause)){
+        do_exit(EFAULT);
+        panic("returned from do_exit");
+    }
+
+    pframe_t *p;
+    int forwrite = (cause & FAULT_WRITE) ? 1 : 0;
+    int lookup_res = pframe_lookup(vma->vma_obj, ADDR_TO_PN(vaddr) -
+            vma->vma_start + vma->vma_off, forwrite, &p);   
+
+    if (lookup_res < 0){
+        do_exit(EFAULT);
+        panic("returned from do_exit");
+    }
+
+    if (cause & FAULT_WRITE){
+        pframe_pin(p);
+        int dirty_res = pframe_dirty(p);
+        pframe_unpin(p);
+
+        if (dirty_res < 0){
+            do_exit(EFAULT);
+            panic("returned from do_exit");
+        }
+    }
+
+    int pdflags = PD_PRESENT | PD_USER;
+
+    int ptflags = PT_PRESENT | PT_USER;
+
+    if (cause & FAULT_WRITE){
+        pdflags |= PD_WRITE;
+        ptflags |= PT_WRITE;
+    }
+
+    pt_map(curproc->p_pagedir,
+           (uintptr_t) PAGE_ALIGN_DOWN(vaddr),
+           pt_virt_to_phys((uintptr_t) p->pf_addr), pdflags, ptflags);
+
+    tlb_flush_all();
+    /* TODO flush TLB (?) */
 }

@@ -384,14 +384,20 @@ s5fs_umount(fs_t *fs)
 static int
 s5fs_read(vnode_t *vnode, off_t offset, void *buf, size_t len)
 {
-    return s5_read_file(vnode, offset, buf, len);
+    kmutex_lock(&vnode->vn_mutex);
+    int ret = s5_read_file(vnode, offset, buf, len);
+    kmutex_unlock(&vnode->vn_mutex);
+    return ret;
 }
 
 /* Simply call s5_write_file. */
 static int
 s5fs_write(vnode_t *vnode, off_t offset, const void *buf, size_t len)
 {
-    return s5_write_file(vnode, offset, buf, len);
+    kmutex_lock(&vnode->vn_mutex);
+    int ret = s5_write_file(vnode, offset, buf, len);
+    kmutex_unlock(&vnode->vn_mutex);
+    return ret;
 }
 
 /* This function is deceptivly simple, just return the vnode's
@@ -403,9 +409,10 @@ s5fs_write(vnode_t *vnode, off_t offset, const void *buf, size_t len)
 static int
 s5fs_mmap(vnode_t *file, vmarea_t *vma, mmobj_t **ret)
 {
-        NOT_YET_IMPLEMENTED("VM: s5fs_mmap");
-
-        return 0;
+    kmutex_lock(&file->vn_mutex);
+    *ret = &file->vn_mmobj;
+    kmutex_unlock(&file->vn_mutex);
+    return 0;
 }
 
 /* checks the state of a new vnode, created with a call to vget
@@ -438,9 +445,7 @@ s5fs_create(vnode_t *dir, const char *name, size_t namelen, vnode_t **result)
 {
     KASSERT(namelen < NAME_LEN);
 
-    vnode_t *child;
-
-    KASSERT(s5fs_lookup(dir, name, namelen, &child) != 0);
+    kmutex_lock(&dir->vn_mutex);
 
     fs_t *fs = VNODE_TO_S5FS(dir)->s5f_fs;
 
@@ -448,20 +453,25 @@ s5fs_create(vnode_t *dir, const char *name, size_t namelen, vnode_t **result)
 
     if (ino < 0){
         dbg(DBG_S5FS, "unable to alloc a new inode\n");
+        kmutex_unlock(&dir->vn_mutex);
         return ino;
     }
 
-    child = vget(fs, ino);
+    vnode_t *child = vget(fs, ino);
+
+    kmutex_lock(&child->vn_mutex);
 
     /* make sure the state of the new vnode is correct */
     assert_new_vnode_state(child, ino, S5_TYPE_DATA, 0);
     
-    int link_res = s5fs_link(child, dir, name, namelen);
+    int link_res = s5_link(dir, child, name, namelen);
 
     if (link_res < 0){
         dbg(DBG_S5FS, "error creating entry for new directory in parent dir\n");
         vput(child);
-        s5_free_inode(child);
+        kmutex_unlock(&child->vn_mutex);
+        kmutex_unlock(&dir->vn_mutex);
+        /*s5_free_inode(child);*/
         return link_res;
     }
 
@@ -470,6 +480,8 @@ s5fs_create(vnode_t *dir, const char *name, size_t namelen, vnode_t **result)
 
     *result = child;
 
+    kmutex_unlock(&child->vn_mutex);
+    kmutex_unlock(&dir->vn_mutex);
     return 0;
 }
 
@@ -487,9 +499,7 @@ s5fs_mknod(vnode_t *dir, const char *name, size_t namelen, int mode, devid_t dev
 {
     KASSERT(namelen < NAME_LEN);
 
-    vnode_t *child;
-
-    KASSERT(s5fs_lookup(dir, name, namelen, &child) != 0);
+    kmutex_lock(&dir->vn_mutex);
 
     fs_t *fs = VNODE_TO_S5FS(dir)->s5f_fs;
 
@@ -505,21 +515,26 @@ s5fs_mknod(vnode_t *dir, const char *name, size_t namelen, int mode, devid_t dev
 
     if (ino < 0){
         dbg(DBG_S5FS, "unable to alloc a new inode\n");
+        kmutex_unlock(&dir->vn_mutex);
         return ino;
     }
     
-    child = vget(fs, ino);
+    vnode_t *child = vget(fs, ino);
+
+    kmutex_lock(&child->vn_mutex);
 
     /* make sure the state of the new vnode is correct */
     assert_new_vnode_state(child, ino, S_ISCHR(mode) ? S5_TYPE_CHR : S5_TYPE_BLK,
             devid);
     
-    int link_res = s5fs_link(child, dir, name, namelen);
+    int link_res = s5_link(dir, child, name, namelen);
 
     if (link_res < 0){
         dbg(DBG_S5FS, "error creating entry for new directory in parent dir\n");
         vput(child);
-        s5_free_inode(child);
+        kmutex_unlock(&child->vn_mutex);
+        kmutex_unlock(&dir->vn_mutex);
+        /*s5_free_inode(child);*/
         return link_res;
     }
 
@@ -528,6 +543,8 @@ s5fs_mknod(vnode_t *dir, const char *name, size_t namelen, int mode, devid_t dev
     KASSERT(child->vn_refcount == 0);
     KASSERT(VNODE_TO_S5INODE(child)->s5_linkcount == 1);
 
+    kmutex_unlock(&child->vn_mutex);
+    kmutex_unlock(&dir->vn_mutex);
     return 0;
 }
 
@@ -539,9 +556,11 @@ s5fs_mknod(vnode_t *dir, const char *name, size_t namelen, int mode, devid_t dev
 int
 s5fs_lookup(vnode_t *base, const char *name, size_t namelen, vnode_t **result)
 {
+    kmutex_lock(&base->vn_mutex);
     int ino = s5_find_dirent(base, name, namelen);
 
     if (ino == -ENOENT){
+        kmutex_unlock(&base->vn_mutex);
         return -ENOENT;
     }
 
@@ -553,6 +572,7 @@ s5fs_lookup(vnode_t *base, const char *name, size_t namelen, vnode_t **result)
 
     *result = child;
 
+    kmutex_unlock(&base->vn_mutex);
     return 0;
 }
 
@@ -569,7 +589,16 @@ s5fs_link(vnode_t *child, vnode_t *parent, const char *name, size_t namelen)
 {
     KASSERT(parent->vn_ops->mkdir != NULL);
     KASSERT(child->vn_ops->mkdir == NULL);
-    return s5_link(parent, child, name, namelen);
+
+    kmutex_lock(&parent->vn_mutex);
+    kmutex_lock(&child->vn_mutex);
+
+    int ret = s5_link(parent, child, name, namelen);
+
+    kmutex_unlock(&child->vn_mutex);
+    kmutex_unlock(&parent->vn_mutex);
+
+    return ret;
 }
 
 /*
@@ -584,7 +613,11 @@ static int
 s5fs_unlink(vnode_t *dir, const char *name, size_t namelen)
 {
     KASSERT(dir->vn_ops->mkdir != NULL);
-    return s5_remove_dirent(dir, name, namelen);
+
+    kmutex_lock(&dir->vn_mutex);
+    int ret = s5_remove_dirent(dir, name, namelen);
+    kmutex_unlock(&dir->vn_mutex);
+    return ret;
 }
 
 /*
@@ -611,11 +644,10 @@ s5fs_mkdir(vnode_t *dir, const char *name, size_t namelen)
     static const char *dotstring = ".";
     static const char *dotdotstring = "..";
 
-    vnode_t *child;
-
     KASSERT(namelen < NAME_LEN);
     KASSERT(dir->vn_ops->mkdir != NULL);
-    KASSERT(s5fs_lookup(dir, name, namelen, &child) != 0);
+
+    kmutex_lock(&dir->vn_mutex);
 
     fs_t *fs = VNODE_TO_S5FS(dir)->s5f_fs;
 
@@ -623,10 +655,13 @@ s5fs_mkdir(vnode_t *dir, const char *name, size_t namelen)
 
     if (ino < 0){
         dbg(DBG_S5FS, "unable to alloc a new inode\n");
+        kmutex_unlock(&dir->vn_mutex);
         return ino;
     }
 
-    child = vget(fs, ino);
+    vnode_t *child = vget(fs, ino);
+
+    kmutex_lock(&child->vn_mutex);
 
     /* make sure the state of the new vnode is correct */
     assert_new_vnode_state(child, ino, S5_TYPE_DIR, 0);
@@ -636,8 +671,10 @@ s5fs_mkdir(vnode_t *dir, const char *name, size_t namelen)
     if (link_res < 0){
         dbg(DBG_S5FS, "error creating entry for \'.\' in new directory\n");
         /* TODO make sure we should be vputting */
+        /*s5_free_inode(child);*/
         vput(child);
-        s5_free_inode(child);
+        kmutex_unlock(&child->vn_mutex);
+        kmutex_unlock(&dir->vn_mutex);
         return link_res;
     }
 
@@ -647,8 +684,10 @@ s5fs_mkdir(vnode_t *dir, const char *name, size_t namelen)
 
     if (link_res < 0){
         dbg(DBG_S5FS, "error creating entry for \'..\' in new directory\n");
+        /*s5_free_inode(child);*/
         vput(child);
-        s5_free_inode(child);
+        kmutex_unlock(&child->vn_mutex);
+        kmutex_unlock(&dir->vn_mutex);
         return link_res;
     }
 
@@ -656,8 +695,10 @@ s5fs_mkdir(vnode_t *dir, const char *name, size_t namelen)
 
     if (link_res < 0){
         dbg(DBG_S5FS, "error creating entry for new directory in parent dir\n");
+        /*s5_free_inode(child);*/
         vput(child);
-        s5_free_inode(child);
+        kmutex_unlock(&child->vn_mutex);
+        kmutex_unlock(&dir->vn_mutex);
         return link_res;
     }
 
@@ -667,6 +708,8 @@ s5fs_mkdir(vnode_t *dir, const char *name, size_t namelen)
 
     KASSERT(child->vn_refcount - child->vn_nrespages == 0);
 
+    kmutex_unlock(&child->vn_mutex);
+    kmutex_unlock(&dir->vn_mutex);
     return 0;
 }
 
@@ -687,6 +730,8 @@ s5fs_rmdir(vnode_t *parent, const char *name, size_t namelen)
     KASSERT(!(namelen == 2 && name[0] == '.' && name[1] == '.'));
     KASSERT(parent->vn_ops->rmdir != NULL);
 
+    kmutex_lock(&parent->vn_mutex);
+
     int ino = s5_find_dirent(parent, name, namelen);
 
     /* we check in do_rmdir to make sure the directory exists */
@@ -694,10 +739,12 @@ s5fs_rmdir(vnode_t *parent, const char *name, size_t namelen)
 
     if (ino < 0){
         dbg(DBG_S5FS, "error finding child dir to delete\n");
+        kmutex_unlock(&parent->vn_mutex);
         return ino;
     }
 
     vnode_t *child = vget(VNODE_TO_S5FS(parent)->s5f_fs, ino);
+    kmutex_lock(&child->vn_mutex);
 
     int dot_lookup_res = s5_find_dirent(child, ".", 1);
     int dotdot_lookup_res = s5_find_dirent(child, "..", 2);
@@ -706,6 +753,8 @@ s5fs_rmdir(vnode_t *parent, const char *name, size_t namelen)
 
     if (dot_lookup_res < 0 || dotdot_lookup_res < 0){
         dbg(DBG_S5FS, "error reading dirents of directory to delete\n");
+        kmutex_unlock(&child->vn_mutex);
+        kmutex_unlock(&parent->vn_mutex);
         return (dot_lookup_res < 0) ? dot_lookup_res : dotdot_lookup_res;
     }
 
@@ -713,6 +762,8 @@ s5fs_rmdir(vnode_t *parent, const char *name, size_t namelen)
 
     if ((unsigned) child->vn_len > 2 * sizeof(s5_dirent_t)){
         vput(child);
+        kmutex_unlock(&child->vn_mutex);
+        kmutex_unlock(&parent->vn_mutex);
         return -ENOTEMPTY;
     }
 
@@ -721,6 +772,8 @@ s5fs_rmdir(vnode_t *parent, const char *name, size_t namelen)
     VNODE_TO_S5INODE(parent)->s5_linkcount--;
     s5_dirty_inode(VNODE_TO_S5FS(parent), VNODE_TO_S5INODE(parent));
 
+    kmutex_unlock(&child->vn_mutex);
+    kmutex_unlock(&parent->vn_mutex);
     return s5_remove_dirent(parent, name, namelen);
 }
 
@@ -745,6 +798,8 @@ static int s5fs_readdir(vnode_t *vnode, off_t offset, struct dirent *d)
         return 0;
     }    
 
+    kmutex_lock(&vnode->vn_mutex);
+
     s5_dirent_t s5d;
 
     int read_res = s5_read_file(vnode, offset, (char *) &s5d, s5_dirent_size);
@@ -760,6 +815,7 @@ static int s5fs_readdir(vnode_t *vnode, off_t offset, struct dirent *d)
         dbg(DBG_S5FS, "error reading dirent from file\n");
     }
 
+    kmutex_unlock(&vnode->vn_mutex);
     return read_res;
 }
 
@@ -776,11 +832,13 @@ static int s5fs_readdir(vnode_t *vnode, off_t offset, struct dirent *d)
 static int
 s5fs_stat(vnode_t *vnode, struct stat *ss)
 {
+    kmutex_lock(&vnode->vn_mutex);
     int allocated_blocks = s5_inode_blocks(vnode);
     s5_inode_t *inode = VNODE_TO_S5INODE(vnode);
 
     if (allocated_blocks < 0){
         dbg(DBG_S5FS, "error calculating number of allocated blocks\n");
+        kmutex_unlock(&vnode->vn_mutex);
         return allocated_blocks;
     }
 
@@ -791,6 +849,7 @@ s5fs_stat(vnode_t *vnode, struct stat *ss)
     ss->st_blksize = BLOCK_SIZE;
     ss->st_blocks = allocated_blocks;
 
+    kmutex_unlock(&vnode->vn_mutex);
     return 0;
 }
 

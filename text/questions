@@ -1,17 +1,44 @@
 in vfs_syscall functions
     - just want to clear up the mutex thing again
+-------------------
 
-in s5_seek_to_block()
-    - what to do if seekptr is great than file length
-      and we're not allocating?
-    - where do we use pin() and unpin()?
+in vmmap_map()
+    - is it okay to not set vma->vma_vmmap before calling
+      mmap? we're also told to set the vma_vmmap field
+      in insert.
+        - why the fuck not?
+    - is it okay to have neither MAP_FIXED nor MAP_ANON, or both?
 
-in s5_link()
-    - why do we need to call s5_find_dirent()?
+in do_fork()
+    - how do we return two values?
+    - do we have to copy the entire stack over?
 
-in s5_read/delete_vnode()
-    - should we dirty the inode?
+in shadow_fillpage()
+    - what's this about using the page identified by pf->pf_obj?
+
+in do_munmap()
+    - does len have to be page aligned?
+
+-----------------------------------------
 
 In general:
-    - Should the pageoutdaemon have a cwd? If so,
-    what should it be, and how should we set it?
+    - do non-shadow objects have their vma_olink fields set?
+    - In mmap(), munmap(), and vmmap_remove(), should I be invalidating
+page table entries?
+
+in kthread_cancel()
+    - should my assertion actually be commented out?
+
+in do_waitpid_any()
+    - is it okay that we have to have a while loop?
+
+in sys_read()
+    - do we have to do this in a loop?
+
+-------------------
+
+Potential bugs:
+    - if s5_write_file() ends early b/c of an error, the file 
+      size is still as if the entire write suceeded
+
+    - Address space before/after list in vmmap_find_range

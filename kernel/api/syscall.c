@@ -42,6 +42,10 @@ static __attribute__((unused)) void syscall_init(void)
 }
 init_func(syscall_init);
 
+static uint32_t min(uint32_t a, uint32_t b){
+    return a < b ? a : b;
+}
+
 /*
  * this is one of the few sys_* functions you have to write. be sure to
  * check out the sys_* functions we have provided before trying to write
@@ -56,8 +60,51 @@ init_func(syscall_init);
 static int
 sys_read(read_args_t *arg)
 {
-        NOT_YET_IMPLEMENTED("VM: sys_read");
+    read_args_t kern_args;
+    int err;
+
+    if ((err = copy_from_user(&kern_args, arg, sizeof(read_args_t))) < 0) {
+        curthr->kt_errno = -err;
         return -1;
+    }
+
+    char *tmpbuf = (char *) page_alloc();
+
+    if (tmpbuf == NULL){
+        curthr->kt_errno = ENOMEM;
+        return -1;
+    }
+
+    uint32_t total_bytes_read = 0;
+    while (total_bytes_read < kern_args.nbytes && !err){
+        int bytes_to_read = min(kern_args.nbytes - total_bytes_read, PAGE_SIZE);
+
+        int bytes_read = do_read(kern_args.fd, tmpbuf, bytes_to_read);
+
+        if (bytes_read < 0){
+            page_free(tmpbuf);
+            curthr->kt_errno = -bytes_read;
+            return -1;
+        }
+
+        err = copy_to_user((void *) ((uint32_t) kern_args.buf + total_bytes_read),
+                tmpbuf, bytes_read);
+
+        total_bytes_read += bytes_read;
+
+        if (bytes_read < bytes_to_read){
+            break;
+        }
+    }
+
+    page_free(tmpbuf);
+
+    if (err < 0){
+        curthr->kt_errno = -err;
+        return -1;
+    }
+
+    return total_bytes_read;
 }
 
 /*
@@ -66,8 +113,55 @@ sys_read(read_args_t *arg)
 static int
 sys_write(write_args_t *arg)
 {
-        NOT_YET_IMPLEMENTED("VM: sys_write");
+    write_args_t kern_args;
+    int err;
+
+    if ((err = copy_from_user(&kern_args, arg, sizeof(write_args_t))) < 0){
+        curthr->kt_errno = -err;
         return -1;
+    }
+
+    char *tmpbuf = (char *) page_alloc();
+
+    if (tmpbuf == NULL){
+        curthr->kt_errno = ENOMEM;
+        return -1;
+    }
+
+    uint32_t total_bytes_written = 0;
+    while (total_bytes_written < kern_args.nbytes && !err){
+        int bytes_to_write = min(kern_args.nbytes - total_bytes_written, PAGE_SIZE);
+
+        if ((err = copy_from_user(tmpbuf,
+                        (void *) ((uint32_t) kern_args.buf + total_bytes_written),
+                        bytes_to_write)) < 0)
+        {
+            page_free(tmpbuf);
+            curthr->kt_errno = -err;
+            return -1;
+        }
+
+        int bytes_written = do_write(kern_args.fd, tmpbuf, bytes_to_write);
+
+        if (bytes_written < 0){
+            err = bytes_written;
+        }
+
+        total_bytes_written += bytes_written;
+
+        if (bytes_written < bytes_to_write){
+            break;
+        }
+    }
+
+    page_free(tmpbuf);
+
+    if (err < 0){
+        curthr->kt_errno = -err;
+        return -1;
+    }
+
+    return total_bytes_written;
 }
 
 /*
@@ -82,8 +176,35 @@ sys_write(write_args_t *arg)
 static int
 sys_getdents(getdents_args_t *arg)
 {
-        NOT_YET_IMPLEMENTED("VM: sys_getdents");
+    getdents_args_t kern_args;
+    int err;
+
+    if ((err = copy_from_user(&kern_args, arg, sizeof(getdents_args_t))) < 0){
+        curthr->kt_errno = -err;
         return -1;
+    }
+
+    dirent_t d;
+    uint32_t ndirents = kern_args.count / sizeof(dirent_t);
+
+    int total_bytes_read = 0;
+
+    uint32_t i;
+    for (i = 0; i < ndirents; i++){
+        int bytes_read = do_getdent(kern_args.fd, &d);
+
+        if (bytes_read < 0){
+            curthr->kt_errno = -bytes_read;
+            return -1;
+        } else if (bytes_read == 0){
+            break;
+        }
+
+        copy_to_user(kern_args.dirp + i, &d, bytes_read);
+        total_bytes_read += bytes_read;
+    }
+
+    return total_bytes_read;
 }
 
 #ifdef __MOUNTING__

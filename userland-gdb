@@ -1,0 +1,55 @@
+Hi everyone,
+
+Now that many of you are taking your first steps into userland, you may be interested in using gdb on userland binaries.
+
+To debug a userland binary, you need to load the symbols for the binary you are interested in into gdb. Note that when the thread switches, these symbols will be invalid and gdb will just start printing garbage.
+
+First, we want to figure out where the text section will be loaded. We will use objdump on the compiled binary (they end with .exec), and the address we want is listed in the "VMA" column.
+
+$ objdump --headers --section=".text" user/usr/bin/hello.exec
+
+user/simple/hello:     file format elf32-i386
+
+Sections:
+Idx Name          Size      VMA       LMA       File off  Algn
+  6 .text         00000064  08048208  08048208  00000208  2**2
+                  CONTENTS, ALLOC, LOAD, READONLY, CODE
+
+Now we can use this information in gdb.
+
+ $ ./weenix -d gdb
+...
+Breakpoint 3, bootstrap (arg1=0, arg2=0x0) at main/kmain.c:121
+121     {
+(gdb) add-symbol-file user/usr/bin/hello.exec 0x08048208
+add symbol table from file "user/usr/bin/hello.exec" at
+        .text_addr = 0x8048208
+(y or n) y
+Reading symbols from /gpfs/main/home/eric/projects/weenix/user/usr/bin/hello.exec...done.
+(gdb) b main
+Breakpoint 4 at 0x8048208: file ./hello.c, line 12.
+(gdb) c
+Continuing.
+
+Breakpoint 3, bootstrap (arg1=0, arg2=0x0) at main/kmain.c:123
+123             pt_template_init();
+(gdb) c
+Continuing.
+
+Breakpoint 4, main (argc=1, argv=0x8047eec) at ./hello.c:12
+12      {
+(gdb) list
+7
+8       #include <unistd.h>
+9       #include <fcntl.h>
+10
+11      int main(int argc, char **argv)
+12      {
+13              open("/dev/tty0", O_RDONLY, 0);
+14              open("/dev/tty0", O_WRONLY, 0);
+15
+16              write(1, "Hello, world!\n", 14);
+(gdb) 
+
+Hope this helps!
+-The CS169 TAs

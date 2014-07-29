@@ -52,7 +52,8 @@ static mmobj_ops_t shadow_mmobj_ops = {
 void
 shadow_init()
 {
-        NOT_YET_IMPLEMENTED("VM: shadow_init");
+    shadow_allocator = slab_allocator_create("shadow", sizeof(mmobj_t));
+    KASSERT(shadow_allocator != NULL && "failed to create shadow allocator!");
 }
 
 /*
@@ -64,8 +65,19 @@ shadow_init()
 mmobj_t *
 shadow_create()
 {
-        NOT_YET_IMPLEMENTED("VM: shadow_create");
-        return NULL;
+    static uint32_t ncreated = 0;
+
+    if (ncreated++ % 10 == 0){
+        shadowd_wakeup();
+    }
+
+    mmobj_t *newshadow = slab_obj_alloc(shadow_allocator);
+
+    if (newshadow != NULL){
+        mmobj_init(newshadow, &shadow_mmobj_ops);
+    }
+
+    return newshadow;
 }
 
 /* Implementation of mmobj entry points: */
@@ -76,7 +88,8 @@ shadow_create()
 static void
 shadow_ref(mmobj_t *o)
 {
-        NOT_YET_IMPLEMENTED("VM: shadow_ref");
+    KASSERT(o->mmo_ops == &shadow_mmobj_ops);
+    o->mmo_refcount++;
 }
 
 /*
@@ -90,7 +103,26 @@ shadow_ref(mmobj_t *o)
 static void
 shadow_put(mmobj_t *o)
 {
-        NOT_YET_IMPLEMENTED("VM: shadow_put");
+    KASSERT(o->mmo_refcount > o->mmo_nrespages && "refcount == nrespages already!");
+    KASSERT(o->mmo_nrespages >= 0);
+
+    if (o->mmo_refcount == o->mmo_nrespages + 1){
+        pframe_t *p;
+        list_iterate_begin(&o->mmo_respages, p, pframe_t, pf_olink){
+            pframe_unpin(p);
+            pframe_free(p);
+        } list_iterate_end();
+
+        mmobj_t *shadowed_obj = o->mmo_shadowed;
+        mmobj_t *bottom_obj = o->mmo_un.mmo_bottom_obj;
+
+        shadowed_obj->mmo_ops->put(shadowed_obj);
+        bottom_obj->mmo_ops->put(bottom_obj);
+
+        slab_obj_free(shadow_allocator, o);
+    } else {
+        o->mmo_refcount--;
+    }
 }
 
 /* This function looks up the given page in this shadow object. The
@@ -105,8 +137,24 @@ shadow_put(mmobj_t *o)
 static int
 shadow_lookuppage(mmobj_t *o, uint32_t pagenum, int forwrite, pframe_t **pf)
 {
-        NOT_YET_IMPLEMENTED("VM: shadow_lookuppage");
-        return 0;
+    if (forwrite){
+        return pframe_get(o, pagenum, pf);
+    }
+
+    pframe_t *p = NULL;
+    mmobj_t *curr = o;
+
+    while (p == NULL && curr->mmo_shadowed != NULL){
+        p = pframe_get_resident(curr, pagenum);
+        curr = curr->mmo_shadowed;
+    }
+
+    if (p == NULL){
+        return pframe_lookup(curr, pagenum, 0, pf);
+    }
+   
+    *pf = p;
+    return 0;
 }
 
 /* As per the specification in mmobj.h, fill the page frame starting
@@ -123,8 +171,28 @@ shadow_lookuppage(mmobj_t *o, uint32_t pagenum, int forwrite, pframe_t **pf)
 static int
 shadow_fillpage(mmobj_t *o, pframe_t *pf)
 {
-        NOT_YET_IMPLEMENTED("VM: shadow_fillpage");
-        return 0;
+    pframe_t *p = NULL;
+    mmobj_t *curr = o->mmo_shadowed;
+
+    while (p == NULL && curr != o->mmo_un.mmo_bottom_obj){
+        p = pframe_get_resident(curr, pf->pf_pagenum);
+        curr = curr->mmo_shadowed;
+    }
+    
+    if (p == NULL){
+        KASSERT(curr == o->mmo_un.mmo_bottom_obj);
+        int lookup_res = pframe_lookup(curr, pf->pf_pagenum, 1, &p);
+
+        if (lookup_res < 0){
+            return lookup_res;
+        }
+    }
+
+    KASSERT(p != NULL);
+
+    pframe_pin(pf);
+    memcpy(pf->pf_addr, p->pf_addr, PAGE_SIZE);
+    return 0;
 }
 
 /* These next two functions are not difficult. */
@@ -132,13 +200,11 @@ shadow_fillpage(mmobj_t *o, pframe_t *pf)
 static int
 shadow_dirtypage(mmobj_t *o, pframe_t *pf)
 {
-        NOT_YET_IMPLEMENTED("VM: shadow_dirtypage");
-        return -1;
+    return 0;
 }
 
 static int
 shadow_cleanpage(mmobj_t *o, pframe_t *pf)
 {
-        NOT_YET_IMPLEMENTED("VM: shadow_cleanpage");
-        return -1;
+    return 0;
 }

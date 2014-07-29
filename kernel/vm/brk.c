@@ -11,6 +11,10 @@
 
 #include "proc/proc.h"
 
+static uint32_t max(uint32_t a, uint32_t b){
+    return (a >= b) ? a : b;
+}
+
 /*
  * This function implements the brk(2) system call.
  *
@@ -56,6 +60,74 @@
 int
 do_brk(void *addr, void **ret)
 {
-        NOT_YET_IMPLEMENTED("VM: do_brk");
+    KASSERT(ret != NULL);
+
+    if (addr == NULL || addr == curproc->p_brk){
+        *ret = curproc->p_brk;
         return 0;
+    }
+
+    if (addr < curproc->p_start_brk || (uint32_t) addr > USER_MEM_HIGH){
+        return -ENOMEM;
+    }
+
+    uint32_t old_brk = (uint32_t) curproc->p_brk;
+
+    uint32_t brk_end_page = NULL;
+
+    if (ADDR_TO_PN(PAGE_ALIGN_UP(addr)) == ADDR_TO_PN(PAGE_ALIGN_UP(curproc->p_brk))){
+        /* we're good */
+    } else if (addr <= curproc->p_brk){
+        /* if it's not page-aligned, then addr does not lie on a page
+         * boundary, so we actually need to have our mapping include
+         * the page that addr is in. This is exclusive, so it's the first
+         * page to unmap */
+        KASSERT(brk_end_page == NULL);
+        brk_end_page = ADDR_TO_PN(PAGE_ALIGN_UP(addr));
+        
+        uint32_t old_brk_end_page = ADDR_TO_PN(PAGE_ALIGN_UP(old_brk));
+
+        uint32_t npages = old_brk_end_page - brk_end_page;
+
+        vmmap_remove(curproc->p_vmmap, brk_end_page, npages);
+
+       /* curproc->p_brk = addr;*/
+        /**ret = addr;*/
+        /*return 0;*/
+    } else {
+        KASSERT(addr > curproc->p_brk);
+
+        /* the first page of the new brk area that isn't part of the vma
+         * for the brk area already. If brk isn't page aligned, then the page
+         * that it lies in is already mapped, so we add one to it's page number
+         * to find the first page not included in the brk area's vma
+         */
+        uint32_t first_new_page = ADDR_TO_PN(PAGE_ALIGN_UP(curproc->p_brk));
+        /* exclusive */
+        brk_end_page = ADDR_TO_PN(PAGE_ALIGN_UP(addr));
+        
+        uint32_t npages = brk_end_page - first_new_page;
+        KASSERT(npages > 0);
+
+        if (!vmmap_is_range_empty(curproc->p_vmmap, first_new_page, npages)){
+            return -ENOMEM;
+        }
+
+        vmarea_t *vma =
+            vmmap_lookup(curproc->p_vmmap, ADDR_TO_PN(PAGE_ALIGN_UP(curproc->p_start_brk)));
+
+        if (vma == NULL){
+            vmmap_map(curproc->p_vmmap, NULL, ADDR_TO_PN(PAGE_ALIGN_UP(curproc->p_start_brk)),
+                    brk_end_page - ADDR_TO_PN(PAGE_ALIGN_UP(curproc->p_start_brk)),
+                    PROT_READ | PROT_WRITE, 
+                    MAP_PRIVATE, 0, VMMAP_DIR_LOHI, &vma);
+        } else {
+            KASSERT(brk_end_page >= vma->vma_end);
+            vma->vma_end = brk_end_page;
+        }
+    }
+
+    curproc->p_brk = addr;
+    *ret = addr;
+    return 0;
 }

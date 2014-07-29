@@ -293,7 +293,7 @@ n_tty_process_char(tty_ldisc_t *ldisc, char c) {
     char *ret_text;
     
     if (IS_BACKSPACE(c)){
-        dbg(DBG_TERM, "received a backspace\n");
+        /*dbg(DBG_TERM, "received a backspace\n");*/
 
         if (!has_raw_data(ldisc_to_ntty(ldisc))){
             return NULL;
@@ -321,7 +321,7 @@ n_tty_process_char(tty_ldisc_t *ldisc, char c) {
         ret_text[0] = '\0';
 
     } else if (IS_NEWLINE(c)){
-        dbg(DBG_TERM, "receiving a newline\n");
+        /*dbg(DBG_TERM, "receiving a newline\n");*/
         ret_text = kmalloc(3 * sizeof(char));
 
         if (ret_text == NULL){
@@ -333,7 +333,7 @@ n_tty_process_char(tty_ldisc_t *ldisc, char c) {
         ret_text[2] = '\0';
 
     }  else {
-        dbg(DBG_TERM, "received a char %c/%x\n", c, c);
+        /*dbg(DBG_TERM, "received a char %c/%x\n", c, c);*/
         ret_text = kmalloc(2 * sizeof(char));
 
         if (ret_text == NULL){

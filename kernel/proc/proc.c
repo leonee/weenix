@@ -114,6 +114,7 @@ proc_create(char *name)
     p->p_pagedir = pt_create_pagedir(); 
 
     if (p->p_pagedir == NULL){
+        slab_obj_free(proc_allocator, p);
         return NULL;
     }
   
@@ -151,7 +152,7 @@ proc_create(char *name)
         p->p_files[j] = NULL;
     } 
 
-    if (p->p_pid > 2){
+    if (p->p_pid > 3){
         p->p_cwd = p->p_pproc->p_cwd;
         vref(p->p_cwd);
     } else {
@@ -159,6 +160,27 @@ proc_create(char *name)
          * get set later */
         p->p_cwd = NULL;
     }
+#endif
+
+#ifdef __VM__
+    p->p_vmmap = vmmap_create();
+
+    if (p->p_vmmap == NULL){
+        if (p->p_cwd != NULL){
+            vput(p->p_cwd);
+        }
+
+        if (list_link_is_linked(&p->p_child_link)){
+            list_remove(&p->p_child_link);
+        }
+
+        pt_destroy_pagedir(p->p_pagedir);
+        list_remove(&p->p_list_link);
+        slab_obj_free(proc_allocator, p);
+        return NULL;
+    }
+
+    p->p_vmmap->vmm_proc = p;
 #endif
 
     return p;
@@ -186,7 +208,12 @@ static void reparent_all_children(list_t *children){
         proc_t *p = list_item(link, proc_t, p_child_link);
         link = link->l_next;
 
-        reparent_proc(p);
+        if (curproc == proc_initproc){
+            int status;
+            do_waitpid(p->p_pid, 0, &status);
+        } else {
+            reparent_proc(p);
+        }
     }
 }
 
@@ -240,13 +267,16 @@ proc_cleanup(int status)
         }
     }
 
-    if (curproc->p_pid != 2){
+    if (curproc->p_pid != 2 && curproc->p_pid != 3){
         KASSERT(curproc->p_cwd != NULL && "cwd is null");
         vput(curproc->p_cwd);
         curproc->p_cwd = NULL;
     }
 #endif
 
+#ifdef __VM__
+    vmmap_destroy(curproc->p_vmmap);
+#endif
     sched_wakeup_on(&curproc->p_pproc->p_wait);
 }
 
@@ -392,13 +422,14 @@ static void cleanup_child_proc(proc_t *p){
 static pid_t do_waitpid_any(int *status){
     proc_t *dead_child = find_dead_child();
 
-    if (dead_child == NULL){
+    while (dead_child == NULL){
         sched_cancellable_sleep_on(&curproc->p_wait);
 
         /* we only have to do this once, because this process
          * will only wake up if a child exits 
          */
         dead_child = find_dead_child();
+        /*KASSERT(dead_child != NULL);*/
     }
 
     cleanup_child_proc(dead_child);

@@ -49,12 +49,14 @@
 #include "test/atatest.h"
 #include "test/memdevtest.h"
 #include "test/s5fstest.h"
+#include "test/vmmtest.h"
+#include "test/kshell/customcommands.h"
 
 #include "test/kshell/kshell.h"
 #include "../test/kshell/priv.h"
 #include "../test/kshell/command.h"
 
-
+#include "test/kshell/io.h"
 GDB_DEFINE_HOOK(boot)
 GDB_DEFINE_HOOK(initialized)
 GDB_DEFINE_HOOK(shutdown)
@@ -165,6 +167,23 @@ bootstrap(int arg1, void *arg2)
     return NULL;
 }
 
+static void destroy_kshell_commands(){
+    list_t *commands = &kshell_commands_list;
+    list_link_t *link = commands->l_next;
+
+    while (link != commands){
+        kshell_command_t *cmd = list_item(link, kshell_command_t, kc_commands_link);
+
+        
+        
+        link = link->l_next;
+
+         if (cmd != NULL){
+            kshell_command_destroy(cmd);
+        }
+    }
+}
+
 /**
  * Once we're inside of idleproc_run(), we are executing in the context of the
  * first process-- a real context, so we can finally begin running
@@ -222,16 +241,22 @@ idleproc_run(int arg1, void *arg2)
             panic("unable to create tty2\n");
         }
 
-        if (do_mknod("/dev/null", S_IFBLK, MEM_NULL_DEVID) < 0){
+        /*if (do_mknod("/dev/null", S_IFBLK, MEM_NULL_DEVID) < 0){*/
+        if (do_mknod("/dev/null", S_IFCHR, MEM_NULL_DEVID) < 0){
             panic("unable to create /dev/null");
         } 
 
-        if (do_mknod("/dev/zero", S_IFBLK, MEM_ZERO_DEVID) < 0){
+        if (do_mknod("/dev/zero", S_IFCHR, MEM_ZERO_DEVID) < 0){
             panic("unable to create /dev/zero");
         }
     } else {
         KASSERT(mkdir_res == -EEXIST && "wrong type of error when making /dev");
     }
+
+    int mktmp_res = do_mkdir("/tmp");
+
+    KASSERT((mkdir_res == 0 || mkdir_res == -EEXIST) && "wront type of error \
+            making /tmp");
 
     /*kmutex_init(&lookup_mutex);*/
 
@@ -247,6 +272,8 @@ idleproc_run(int arg1, void *arg2)
     /* Now wait for it */
     child = do_waitpid(-1, 0, &status);
     KASSERT(PID_INIT == child);
+
+    destroy_kshell_commands();
 
 #ifdef __MTP__
     kthread_reapd_shutdown();
@@ -304,21 +331,6 @@ initproc_create(void)
     return init_thread;
 }
 
-static void destroy_kshell_commands(){
-    list_t *commands = &kshell_commands_list;
-    list_link_t *link = commands->l_next;
-
-    while (link != commands){
-        kshell_command_t *cmd = list_item(link, kshell_command_t, kc_commands_link);
-
-        link = link->l_next;
-
-         if (cmd != NULL){
-            kshell_command_destroy(cmd);
-        }
-    }
-}
-
 /**
  * The init thread's function changes depending on how far along your Weenix is
  * developed. Before VM/FI, you'll probably just want to have this run whatever
@@ -333,45 +345,29 @@ static void destroy_kshell_commands(){
 static void *
 initproc_run(int arg1, void *arg2)
 {
+    static char bullshit[1000];
+    /*run_vmm_tests();*/
+
+    /*kshell_add_command("exec", kshell_exec, "executes a given command");*/
+
+    char *empty_args[2] = {"init", NULL};
+    char *empty_envp[1] = {NULL};
+    /*kernel_execve("/usr/bin/hello", empty_args, empty_envp);*/
+    kernel_execve("/sbin/init", empty_args, empty_envp);
+    panic("oh shit");
     
-    run_proc_tests();
-    run_tty_tests();
-    run_memdev_tests();
-    /*run_ata_tests();*/
+    /*run_proc_tests();*/
+    /*run_tty_tests();*/
+    /*run_memdev_tests();*/
+    /*[>run_ata_tests();<]*/
 
-    int i;
-    for (i = 0; i < 4; i++){
-        run_s5fs_tests();
-    }
+/*    int i;*/
+    /*for (i = 0; i < 4; i++){*/
+        /*run_s5fs_tests();*/
+    /*}*/
     
-    vfstest_main(1, NULL);   
+    /*vfstest_main(1, NULL);   */
     
-    kshell_add_command("proctest", proctests, "tests proc code");
-
-    kshell_add_command("ar", kshell_ata_read, "tests ata_read");
-    kshell_add_command("aw", kshell_ata_write, "tests ata_write");
-
-    int err = 0;
-    kshell_t *ksh = kshell_create(0);
-    KASSERT(ksh && "did not create a kernel shell as expected");
-
-    while ((err = kshell_execute_next(ksh)) > 0);
-    KASSERT(err == 0 && "kernel shell exited with an error\n");
-    destroy_kshell_commands(); 
-    kshell_destroy(ksh);
-
-/*
-   list_t *children = &curproc->p_children; 
-   list_link_t *link;
-
-   
-   dbg_print("initproc children: \n");
-   for (link = children->l_next; link != children; link = link->l_next){
-       proc_t *p = list_item(link, proc_t, p_child_link);
-
-       dbg_print("%s\n", p->p_comm);
-   }
-   */
     return NULL;
 }
 
